@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+// solhint-disable use-natspec
+pragma solidity ^0.8.24;
 
 import {Test} from "lib/forge-std/src/Test.sol";
 import {SLIOracle} from "../src/SLIOracle.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SLIOracleTest is Test {
-    SLIOracle sliOracle;
+    SLIOracle public sliOracle;
 
     function setUp() public {
         SLIOracle impl = new SLIOracle();
@@ -18,5 +19,12 @@ contract SLIOracleTest is Test {
     function testIsAdminSet() public view {
         bytes32 adminRole = sliOracle.DEFAULT_ADMIN_ROLE();
         assertTrue(sliOracle.hasRole(adminRole, address(this)));
+    }
+
+    function testAuthorizeUpgradeRevert() public {
+        address newImpl = address(new SLIOracle());
+        vm.prank(vm.addr(1));
+        vm.expectRevert();
+        sliOracle.upgradeToAndCall(newImpl, "");
     }
 }
