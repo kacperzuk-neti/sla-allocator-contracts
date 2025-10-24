@@ -85,7 +85,7 @@
     ],
     "outputs": [
       {
-        "name": "isProxyDeployed",
+        "name": "isDeployed",
         "type": "bool",
         "internalType": "bool"
       }
