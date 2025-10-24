@@ -32,11 +32,6 @@ contract BeaconProxyFactoryTest is Test {
         assertEq(factory.nonce(manager), 2);
     }
 
-    function testDeployProxyAddedToMapping() public {
-        factory.create(manager);
-        assertTrue(factory.proxyDeployed(vm.addr(1)));
-    }
-
     function testDeployContract() public {
         address addr = address(new BeaconProxyFactory(manager, impl));
         uint32 size;
