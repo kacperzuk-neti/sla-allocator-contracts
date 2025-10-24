@@ -23,8 +23,12 @@ contract SLARegistryTest is Test {
 
     function testAuthorizeUpgradeRevert() public {
         address newImpl = address(new SLARegistry());
-        vm.prank(vm.addr(1));
-        vm.expectRevert();
+        address unauthorized = vm.addr(1);
+        bytes32 upgraderRole = slaRegistry.UPGRADER_ROLE();
+        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+
+        vm.prank(unauthorized);
+        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
         slaRegistry.upgradeToAndCall(newImpl, "");
     }
 }

@@ -23,8 +23,12 @@ contract SLIOracleTest is Test {
 
     function testAuthorizeUpgradeRevert() public {
         address newImpl = address(new SLIOracle());
-        vm.prank(vm.addr(1));
-        vm.expectRevert();
+        address unauthorized = vm.addr(1);
+        bytes32 upgraderRole = sliOracle.UPGRADER_ROLE();
+        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+
+        vm.prank(unauthorized);
+        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
         sliOracle.upgradeToAndCall(newImpl, "");
     }
 }

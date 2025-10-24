@@ -5,6 +5,7 @@ pragma solidity ^0.8.24;
 import {Test} from "lib/forge-std/src/Test.sol";
 import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
@@ -23,8 +24,12 @@ contract SLAAllocatorTest is Test {
 
     function testAuthorizeUpgradeRevert() public {
         address newImpl = address(new SLAAllocator());
-        vm.prank(vm.addr(1));
-        vm.expectRevert();
+        address unauthorized = vm.addr(1);
+        bytes32 upgraderRole = slaAllocator.UPGRADER_ROLE();
+        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+
+        vm.prank(unauthorized);
+        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
         slaAllocator.upgradeToAndCall(newImpl, "");
     }
 }
