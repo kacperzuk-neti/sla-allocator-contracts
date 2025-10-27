@@ -31,4 +31,21 @@ contract SLIOracleTest is Test {
         vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
         sliOracle.upgradeToAndCall(newImpl, "");
     }
+
+    function testIsOracleRoleSet() public view {
+        bytes32 oracleRole = sliOracle.ORACLE_ROLE();
+        assertTrue(sliOracle.hasRole(oracleRole, address(this)));
+    }
+
+    function testSLIUpdatedEvent() public {
+        address provider = address(0x123);
+        SLIOracle.ProviderSLIs memory slis = SLIOracle.ProviderSLIs({
+            availability: 1, latency: 1, indexing: 1, retention: 1, bandwidth: 1, stability: 1
+        });
+
+        vm.expectEmit(true, true, true, false);
+        emit SLIOracle.SLIUpdated(provider, slis, block.number);
+
+        sliOracle.setSLI(provider, slis);
+    }
 }
