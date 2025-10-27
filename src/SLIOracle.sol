@@ -17,6 +17,42 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
+     * @notice Oracle role which allows to update SLI values
+     */
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+
+    /**
+     * @notice Struct containing all SLI metrics for a provider
+     */
+    struct ProviderSLIs {
+        uint16 availability;
+        uint16 latency;
+        uint16 indexing;
+        uint16 retention;
+        uint16 bandwidth;
+        uint16 stability;
+    }
+
+    /**
+     * @notice Mapping of provider addresses to their SLI values
+     */
+    mapping(address provider => ProviderSLIs slis) public providerSLIs;
+
+    /**
+     * @notice Mapping of provider addresses to the last update
+     * @dev last update is stored as a block number in which update happened
+     */
+    mapping(address provider => uint256 last_update) public lastUpdateSli;
+
+    /**
+     * @notice Emitted when SLI values are updated for a provider
+     * @param provider Address of the provider
+     * @param slis New SLI values
+     * @param blockNumber Block number in which update happened
+     */
+    event SLIUpdated(address indexed provider, ProviderSLIs indexed slis, uint256 indexed blockNumber);
+
+    /**
      * @notice Disabled constructor (proxy pattern)
      */
     constructor() {
@@ -33,6 +69,18 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
         __Multicall_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+        _grantRole(ORACLE_ROLE, admin);
+    }
+
+    /**
+     * @notice Sets SLI values for a provider
+     * @param provider Address of the provider
+     * @param slis New SLI values
+     */
+    function setSLI(address provider, ProviderSLIs calldata slis) external onlyRole(ORACLE_ROLE) {
+        emit SLIUpdated(provider, slis, block.number);
+        providerSLIs[provider] = slis;
+        lastUpdateSli[provider] = block.number;
     }
 
     // solhint-disable no-empty-blocks

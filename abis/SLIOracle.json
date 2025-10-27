@@ -19,6 +19,19 @@
   },
   {
     "type": "function",
+    "name": "ORACLE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
@@ -125,6 +138,12 @@
         "name": "data",
         "type": "bytes[]",
         "internalType": "bytes[]"
+    "name": "lastUpdateSli",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
@@ -135,6 +154,56 @@
       }
     ],
     "stateMutability": "nonpayable"
+        "name": "last_update",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "providerSLIs",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "availability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "latency",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "indexing",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "retention",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "bandwidth",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "stability",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -180,6 +249,56 @@
         "name": "account",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setSLI",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "slis",
+        "type": "tuple",
+        "internalType": "struct SLIOracle.ProviderSLIs",
+        "components": [
+          {
+            "name": "availability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "latency",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "indexing",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "retention",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "bandwidth",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "stability",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -306,6 +425,63 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SLIUpdated",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "slis",
+        "type": "tuple",
+        "indexed": true,
+        "internalType": "struct SLIOracle.ProviderSLIs",
+        "components": [
+          {
+            "name": "availability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "latency",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "indexing",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "retention",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "bandwidth",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "stability",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      },
+      {
+        "name": "blockNumber",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
