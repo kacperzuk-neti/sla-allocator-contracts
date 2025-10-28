@@ -1,4 +1,10 @@
 {
+  "lib/filecoin-solidity": {
+    "tag": {
+      "name": "v1.1.2",
+      "rev": "2f032e4a9d8ee36c8666c1f69e145bab1a467430"
+    }
+  },
   "lib/forge-std": {
     "tag": {
       "name": "v1.11.0",
