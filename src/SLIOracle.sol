@@ -48,9 +48,8 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @notice Emitted when SLI values are updated for a provider
      * @param provider Address of the provider
      * @param slis New SLI values
-     * @param blockNumber Block number in which update happened
      */
-    event SLIUpdated(address indexed provider, ProviderSLIs indexed slis, uint256 indexed blockNumber);
+    event SLIUpdated(address indexed provider, ProviderSLIs indexed slis);
 
     /**
      * @notice Disabled constructor (proxy pattern)
@@ -78,7 +77,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @param slis New SLI values
      */
     function setSLI(address provider, ProviderSLIs calldata slis) external onlyRole(ORACLE_ROLE) {
-        emit SLIUpdated(provider, slis, block.number);
+        emit SLIUpdated(provider, slis);
         providerSLIs[provider] = slis;
         lastUpdateSli[provider] = block.number;
     }
