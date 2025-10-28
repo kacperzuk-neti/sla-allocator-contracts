@@ -43,8 +43,8 @@ contract SLIOracleTest is Test {
             availability: 1, latency: 1, indexing: 1, retention: 1, bandwidth: 1, stability: 1
         });
 
-        vm.expectEmit(true, true, true, false);
-        emit SLIOracle.SLIUpdated(provider, slis, block.number);
+        vm.expectEmit(true, true, false, false);
+        emit SLIOracle.SLIUpdated(provider, slis);
 
         sliOracle.setSLI(provider, slis);
     }
