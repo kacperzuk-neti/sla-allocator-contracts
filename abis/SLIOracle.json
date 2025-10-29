@@ -476,12 +476,6 @@
             "internalType": "uint16"
           }
         ]
-      },
-      {
-        "name": "blockNumber",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
