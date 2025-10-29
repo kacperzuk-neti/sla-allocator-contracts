@@ -8,10 +8,11 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 contract SLIOracleTest is Test {
     SLIOracle public sliOracle;
+    address public oracle = address(0x123);
 
     function setUp() public {
         SLIOracle impl = new SLIOracle();
-        bytes memory initData = abi.encodeWithSignature("initialize(address)", address(this));
+        bytes memory initData = abi.encodeWithSignature("initialize(address,address)", address(this), oracle);
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         sliOracle = SLIOracle(address(proxy));
     }
@@ -34,7 +35,7 @@ contract SLIOracleTest is Test {
 
     function testIsOracleRoleSet() public view {
         bytes32 oracleRole = sliOracle.ORACLE_ROLE();
-        assertTrue(sliOracle.hasRole(oracleRole, address(this)));
+        assertTrue(sliOracle.hasRole(oracleRole, oracle));
     }
 
     function testSLIUpdatedEvent() public {
@@ -46,6 +47,7 @@ contract SLIOracleTest is Test {
         vm.expectEmit(true, true, false, false);
         emit SLIOracle.SLIUpdated(provider, slis);
 
+        vm.prank(oracle);
         sliOracle.setSLI(provider, slis);
     }
 }
