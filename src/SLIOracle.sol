@@ -62,13 +62,13 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
      */
-    function initialize(address admin) public initializer {
+    function initialize(address admin, address oracle) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __Multicall_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
-        _grantRole(ORACLE_ROLE, admin);
+        _grantRole(ORACLE_ROLE, oracle);
     }
 
     /**
