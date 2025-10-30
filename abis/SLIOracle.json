@@ -58,6 +58,55 @@
   },
   {
     "type": "function",
+    "name": "attestations",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "lastUpdate",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "availability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "latency",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "indexing",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "retention",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "bandwidth",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "stability",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -271,8 +320,13 @@
       {
         "name": "slis",
         "type": "tuple",
-        "internalType": "struct SLIOracle.ProviderSLIs",
+        "internalType": "struct SLIOracle.SLIAttestation",
         "components": [
+          {
+            "name": "lastUpdate",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
           {
             "name": "availability",
             "type": "uint16",
@@ -436,7 +490,7 @@
   },
   {
     "type": "event",
-    "name": "SLIUpdated",
+    "name": "SLIAttestationEvent",
     "inputs": [
       {
         "name": "provider",
@@ -448,8 +502,13 @@
         "name": "slis",
         "type": "tuple",
         "indexed": true,
-        "internalType": "struct SLIOracle.ProviderSLIs",
+        "internalType": "struct SLIOracle.SLIAttestation",
         "components": [
+          {
+            "name": "lastUpdate",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
           {
             "name": "availability",
             "type": "uint16",

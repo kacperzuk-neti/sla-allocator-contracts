@@ -22,9 +22,10 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
     /**
-     * @notice Struct containing all SLI metrics for a provider
+     * @notice Struct containing all SLI metrics for a provider and a block number it was last updated
      */
-    struct ProviderSLIs {
+    struct SLIAttestation {
+        uint256 lastUpdate;
         uint16 availability;
         uint16 latency;
         uint16 indexing;
@@ -32,24 +33,17 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
         uint16 bandwidth;
         uint16 stability;
     }
-
     /**
-     * @notice Mapping of provider addresses to their SLI values
+     * @notice Mapping of provider addresses to their SLI attestations
      */
-    mapping(address provider => ProviderSLIs slis) public providerSLIs;
-
-    /**
-     * @notice Mapping of provider addresses to the last update
-     * @dev last update is stored as a block number in which update happened
-     */
-    mapping(address provider => uint256 last_update) public lastUpdateSli;
+    mapping(address provider => SLIAttestation attestation) public attestations;
 
     /**
      * @notice Emitted when SLI values are updated for a provider
      * @param provider Address of the provider
      * @param slis New SLI values
      */
-    event SLIUpdated(address indexed provider, ProviderSLIs indexed slis);
+    event SLIAttestationEvent(address indexed provider, SLIAttestation indexed slis);
 
     /**
      * @notice Disabled constructor (proxy pattern)
@@ -61,6 +55,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
     /**
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
+     * @param oracle Address with ORACLE_ROLE
      */
     function initialize(address admin, address oracle) public initializer {
         __AccessControl_init();
@@ -76,10 +71,9 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @param provider Address of the provider
      * @param slis New SLI values
      */
-    function setSLI(address provider, ProviderSLIs calldata slis) external onlyRole(ORACLE_ROLE) {
-        emit SLIUpdated(provider, slis);
-        providerSLIs[provider] = slis;
-        lastUpdateSli[provider] = block.number;
+    function setSLI(address provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE) {
+        emit SLIAttestationEvent(provider, slis);
+        attestations[provider] = slis;
     }
 
     // solhint-disable no-empty-blocks
