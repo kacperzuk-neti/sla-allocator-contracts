@@ -38,16 +38,37 @@ contract SLIOracleTest is Test {
         assertTrue(sliOracle.hasRole(oracleRole, oracle));
     }
 
-    function testSLIUpdatedEvent() public {
+    function testSLIAttestationEvent() public {
         address provider = address(0x123);
-        SLIOracle.ProviderSLIs memory slis = SLIOracle.ProviderSLIs({
-            availability: 1, latency: 1, indexing: 1, retention: 1, bandwidth: 1, stability: 1
+        SLIOracle.SLIAttestation memory slis = SLIOracle.SLIAttestation({
+            lastUpdate: block.number, availability: 1, latency: 1, indexing: 1, retention: 1, bandwidth: 1, stability: 1
         });
 
         vm.expectEmit(true, true, false, false);
-        emit SLIOracle.SLIUpdated(provider, slis);
+        emit SLIOracle.SLIAttestationEvent(provider, slis);
 
         vm.prank(oracle);
         sliOracle.setSLI(provider, slis);
+
+        (
+            uint256 storedLastUpdate,
+            uint16 storedAvailability,
+            uint16 storedLatency,
+            uint16 storedIndexing,
+            uint16 storedRetention,
+            uint16 storedBandwidth,
+            uint16 storedStability
+        ) = sliOracle.attestations(provider);
+
+        // Compare lastUpdate is set correctly in storage
+        assertEq(storedLastUpdate, slis.lastUpdate);
+        // Compare that last update is set to current block number
+        assertEq(storedLastUpdate, block.number);
+        assertEq(storedAvailability, slis.availability);
+        assertEq(storedLatency, slis.latency);
+        assertEq(storedIndexing, slis.indexing);
+        assertEq(storedRetention, slis.retention);
+        assertEq(storedBandwidth, slis.bandwidth);
+        assertEq(storedStability, slis.stability);
     }
 }
