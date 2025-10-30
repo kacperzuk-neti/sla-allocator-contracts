@@ -34,12 +34,14 @@ contract BeaconProxyFactory is UpgradeableBeacon {
      * @notice Creates a new instance of an upgradeable contract.
      * @dev Uses BeaconProxy to create a new proxy instance, pointing to the Beacon for the logic contract.
      * @param manager_ The address of the manager responsible for the contract.
+     * @param _provider The address of the provider responsible for the contract.
+     * @param _slaRegistry The address of the SLA registry contract.
      */
-    function create(address manager_) external {
+    function create(address manager_, address _provider, address _slaRegistry) external {
         nonce[manager_]++;
         bytes memory initCode = abi.encodePacked(
             type(BeaconProxy).creationCode,
-            abi.encode(address(this), abi.encodeCall(Beneficiary.initialize, (manager_)))
+            abi.encode(address(this), abi.encodeCall(Beneficiary.initialize, (manager_, _provider, _slaRegistry)))
         );
         address proxy = Create2.deploy(0, keccak256(abi.encode(manager_, nonce[manager_])), initCode);
         proxyDeployed[proxy] = true;

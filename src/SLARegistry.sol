@@ -40,5 +40,22 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param newImplementation Address of new implementation
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+
     // solhint-enable no-empty-blocks
+
+    /**
+     * @notice Retrieves the score for a given provider.
+     * @dev Returns the mocked score for a given provider.
+     * @param provider The address of the provider.
+     * @return The mocked score of the provider.
+     */
+    function score(address provider) public pure returns (uint256) {
+        if (provider == address(0x123)) {
+            return 85;
+        }
+        if (provider == address(0x456)) {
+            return 40;
+        }
+        return 95;
+    }
 }
