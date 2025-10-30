@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {Beneficiary} from "../src/Beneficiary.sol";
@@ -7,10 +7,15 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {BuiltinActorsMock} from "../test/contracts/BuiltinActorsMock.sol";
 import {MockProxy} from "../test/contracts/MockProxy.sol";
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
+import {SLARegistry} from "../src/SLARegistry.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
     BuiltinActorsMock public builtinActorsMock;
+
+    address public provider = address(0x999);
+    address public slaRegistry;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     uint64 SP1 = 10000;
@@ -19,19 +24,133 @@ contract BeneficiaryTest is Test {
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();
+        slaRegistry = address(new SLARegistry());
         address mockProxy = address(new MockProxy());
+
         vm.etch(CALL_ACTOR_ID, address(mockProxy).code);
         vm.etch(address(5555), address(builtinActorsMock).code);
 
-        Beneficiary impl = new Beneficiary();
-        bytes memory initData = abi.encodeWithSignature("initialize(address)", address(this));
-        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
-        beneficiary = Beneficiary(address(proxy));
+        beneficiary = setupBeneficiary(address(this), provider, slaRegistry);
     }
 
-    function testIsAdminSet() public {
+    function setupBeneficiary(address _admin, address _provider, address _slaRegistry) public returns (Beneficiary) {
+        Beneficiary impl = new Beneficiary();
+        bytes memory initData =
+            abi.encodeWithSignature("initialize(address,address,address)", _admin, _provider, _slaRegistry);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
+        return Beneficiary(address(proxy));
+    }
+
+    function testIsAdminSet() public view {
         bytes32 adminRole = beneficiary.DEFAULT_ADMIN_ROLE();
         assertTrue(beneficiary.hasRole(adminRole, address(this)));
+    }
+
+    function testIsManagerSet() public view {
+        bytes32 managerRole = beneficiary.MANAGER_ROLE();
+        assertTrue(beneficiary.hasRole(managerRole, provider));
+    }
+
+    function testIsWithdrawerSet() public view {
+        bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
+        assertTrue(beneficiary.hasRole(withdrawerRole, provider));
+    }
+
+    function testSetSlashRecipient() public {
+        beneficiary.setSlashRecipient(address(0x123));
+        assertEq(beneficiary.slashRecipient(), address(0x123));
+    }
+
+    function testSetSlashRecipientEmitsEvent() public {
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.SlashReciptentUpdated(address(0x123));
+        beneficiary.setSlashRecipient(address(0x123));
+    }
+
+    function testSetSlashRecipientRevert() public {
+        address notAdmin = address(0x333);
+        bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
+        vm.prank(notAdmin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
+        );
+        beneficiary.setSlashRecipient(address(0x123));
+    }
+
+    function testWithdrawForGreenBand() public {
+        vm.deal(address(beneficiary), 10000);
+        vm.startPrank(provider);
+        vm.expectEmit(true, true, true, true);
+
+        emit Beneficiary.Withdrawn(10000, 0);
+        beneficiary.withdraw(address(0x123));
+        assertEq(address(beneficiary).balance, 0);
+    }
+
+    function testWithdrawForAmberBand() public {
+        address providerWithAmberBandScore = address(0x123);
+        beneficiary = setupBeneficiary(address(this), providerWithAmberBandScore, slaRegistry);
+        vm.deal(address(beneficiary), 10000);
+        vm.startPrank(providerWithAmberBandScore);
+        vm.expectEmit(true, true, true, true);
+
+        emit Beneficiary.Withdrawn(8500, 1500);
+        beneficiary.withdraw(address(0x888));
+        assertEq(address(beneficiary).balance, 0);
+    }
+
+    function testWithdrawForRedBand() public {
+        address providerWithRedBandScore = address(0x456);
+        beneficiary = setupBeneficiary(address(this), providerWithRedBandScore, slaRegistry);
+        vm.deal(address(beneficiary), 10000);
+        vm.startPrank(providerWithRedBandScore);
+        vm.expectEmit(true, true, true, true);
+
+        emit Beneficiary.Withdrawn(0, 10000);
+        beneficiary.withdraw(address(0x888));
+        assertEq(address(beneficiary).balance, 0);
+    }
+
+    function testWithddrawRevertsWhenNotWithdrawer() public {
+        address notWithdrawer = address(0x333);
+        bytes32 expectedRole = beneficiary.WITHDRAWER_ROLE();
+        vm.prank(notWithdrawer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, notWithdrawer, expectedRole
+            )
+        );
+        beneficiary.withdraw(address(0x123));
+    }
+
+    function testSetWithdrawerRoleAndRevoke() public {
+        bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
+        vm.startPrank(provider);
+
+        beneficiary.grantWithdrawerRole(address(0x123));
+        assertTrue(beneficiary.hasRole(withdrawerRole, address(0x123)));
+        beneficiary.revokeWithdrawerRole(address(0x123));
+        assertFalse(beneficiary.hasRole(withdrawerRole, address(0x123)));
+    }
+
+    function testSetWithdrawerRoleRevertsWhenNotManager() public {
+        address notManager = address(0x333);
+        bytes32 expectedRole = beneficiary.MANAGER_ROLE();
+        vm.prank(notManager);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notManager, expectedRole)
+        );
+        beneficiary.grantWithdrawerRole(address(0x123));
+    }
+
+    function testRevokeWithdrawerRoleRevertsWhenNotManager() public {
+        address notManager = address(0x123);
+        bytes32 expectedRole = beneficiary.MANAGER_ROLE();
+        vm.prank(notManager);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notManager, expectedRole)
+        );
+        beneficiary.revokeWithdrawerRole(address(0x123));
     }
 
     function testGetBeneficiaryForSP1() public {

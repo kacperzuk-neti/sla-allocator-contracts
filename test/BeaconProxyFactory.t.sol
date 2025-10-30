@@ -7,14 +7,19 @@ import {Beneficiary} from "../src/Beneficiary.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {SLARegistry} from "../src/SLARegistry.sol";
 
 contract BeaconProxyFactoryTest is Test {
     BeaconProxyFactory public factory;
     address public impl;
     address public manager;
+    address public slaRegistry;
+    address public provider;
 
     function setUp() public {
         manager = vm.addr(1);
+        provider = vm.addr(2);
+        slaRegistry = address(new SLARegistry());
         impl = address(new Beneficiary());
         factory = new BeaconProxyFactory(manager, impl);
     }
@@ -32,27 +37,27 @@ contract BeaconProxyFactoryTest is Test {
         address expectedProxy = computeProxyAddress(manager, factory.nonce(manager) + 1);
         emit BeaconProxyFactory.ProxyCreated(expectedProxy);
 
-        factory.create(manager);
+        factory.create(manager, provider, slaRegistry);
     }
 
     function testDeployMarksProxyAsDeployed() public {
         address expectedProxy = computeProxyAddress(manager, factory.nonce(manager) + 1);
-        factory.create(manager);
+        factory.create(manager, provider, slaRegistry);
 
         assertTrue(factory.proxyDeployed(expectedProxy));
     }
 
     function testDeployIncrementsNonce() public {
-        factory.create(manager);
+        factory.create(manager, provider, slaRegistry);
         assertEq(factory.nonce(manager), 1);
-        factory.create(manager);
+        factory.create(manager, provider, slaRegistry);
         assertEq(factory.nonce(manager), 2);
     }
 
     function computeProxyAddress(address manager_, uint256 nonce_) private view returns (address) {
         bytes memory initCode = abi.encodePacked(
             type(BeaconProxy).creationCode,
-            abi.encode(address(factory), abi.encodeCall(Beneficiary.initialize, (manager_)))
+            abi.encode(address(factory), abi.encodeCall(Beneficiary.initialize, (manager_, provider, slaRegistry)))
         );
         bytes32 salt = keccak256(abi.encode(manager_, nonce_));
         bytes32 bytecodeHash = keccak256(initCode);
