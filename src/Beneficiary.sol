@@ -14,7 +14,6 @@ import {SLARegistry} from "./SLARegistry.sol";
  * @dev This contract is designed to be deployed as a proxy contract
  */
 
-
 contract Beneficiary is Initializable, AccessControlUpgradeable {
     /**
      * @notice The role to manage the withdrawer role.
@@ -156,4 +155,3 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         return beneficiaryData;
     }
 }
-

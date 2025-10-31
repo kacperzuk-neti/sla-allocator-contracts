@@ -135,7 +135,7 @@ contract BeneficiaryTest is Test {
         vm.deal(address(beneficiary), 10000);
         vm.startPrank(provider);
         vm.expectRevert(abi.encodeWithSelector(Beneficiary.WithdrawalFailed.selector));
-        
+
         beneficiary.withdraw(payable(to));
         assertEq(address(beneficiary).balance, 10000);
     }
