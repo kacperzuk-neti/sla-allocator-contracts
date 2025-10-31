@@ -490,7 +490,7 @@
   },
   {
     "type": "event",
-    "name": "SLIAttestationEvent",
+    "name": "SLIAttestationUpdate",
     "inputs": [
       {
         "name": "provider",

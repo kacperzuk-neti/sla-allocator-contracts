@@ -43,7 +43,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @param provider Address of the provider
      * @param slis New SLI values
      */
-    event SLIAttestationEvent(address indexed provider, SLIAttestation indexed slis);
+    event SLIAttestationUpdate(address indexed provider, SLIAttestation indexed slis);
 
     /**
      * @notice Disabled constructor (proxy pattern)
@@ -55,7 +55,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
     /**
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
-     * @param oracle Address with ORACLE_ROLE
+     * @param oracle Address that will get ORACLE_ROLE
      */
     function initialize(address admin, address oracle) public initializer {
         __AccessControl_init();
@@ -72,7 +72,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @param slis New SLI values
      */
     function setSLI(address provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE) {
-        emit SLIAttestationEvent(provider, slis);
+        emit SLIAttestationUpdate(provider, slis);
         attestations[provider] = slis;
     }
 
