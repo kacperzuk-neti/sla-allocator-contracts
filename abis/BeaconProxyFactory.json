@@ -23,6 +23,16 @@
         "name": "manager_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_provider",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_slaRegistry",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
