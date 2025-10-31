@@ -45,7 +45,7 @@ contract SLIOracleTest is Test {
         });
 
         vm.expectEmit(true, true, false, false);
-        emit SLIOracle.SLIAttestationEvent(provider, slis);
+        emit SLIOracle.SLIAttestationUpdate(provider, slis);
 
         vm.prank(oracle);
         sliOracle.setSLI(provider, slis);
