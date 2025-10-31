@@ -14,6 +14,7 @@ import {SLARegistry} from "./SLARegistry.sol";
  * @dev This contract is designed to be deployed as a proxy contract
  */
 
+
 contract Beneficiary is Initializable, AccessControlUpgradeable {
     /**
      * @notice The role to manage the withdrawer role.
@@ -48,15 +49,21 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
 
     /**
      * @notice Emits a Withdrawn event.
+     * @param to The address to withdraw the balance to.
      * @param amountToSP The amount to send to the storage provider.
      * @param amountToRedirected The amount to send to the redirected address.
      */
-    event Withdrawn(uint256 indexed amountToSP, uint256 indexed amountToRedirected);
+    event Withdrawn(address indexed to, uint256 amountToSP, uint256 amountToRedirected);
 
     /**
      * @notice Error thrown when the exit code is not zero.
      */
     error ExitCodeError();
+
+    /**
+     * @notice Error thrown when the withdrawal fails.
+     */
+    error WithdrawalFailed();
 
     /**
      * @notice Disabled constructor (proxy pattern)
@@ -73,9 +80,11 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     function initialize(address admin, address _provider, address _slaRegistry) public initializer {
         __AccessControl_init();
+        _setRoleAdmin(WITHDRAWER_ROLE, MANAGER_ROLE);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, _provider);
         _grantRole(WITHDRAWER_ROLE, _provider);
+
         provider = _provider;
         slaRegistry = SLARegistry(_slaRegistry);
     }
@@ -91,46 +100,44 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     }
 
     /**
-     * @notice Revokes the withdrawer role for a given address.
-     * @param _withdrawer The address to revoke the withdrawer role from.
-     * @dev Only the manager can revoke the withdrawer role.
-     */
-    function revokeWithdrawerRole(address _withdrawer) public onlyRole(MANAGER_ROLE) {
-        _revokeRole(WITHDRAWER_ROLE, _withdrawer);
-    }
-
-    /**
-     * @notice Grants the withdrawer role for a given address.
-     * @param _withdrawer The address to grant the withdrawer role to.
-     * @dev Only the manager can grant the withdrawer role.
-     */
-    function grantWithdrawerRole(address _withdrawer) public onlyRole(MANAGER_ROLE) {
-        _grantRole(WITHDRAWER_ROLE, _withdrawer);
-    }
-
-    /**
      * @notice Withdraws the balance of the contract to the specified address. Emits a Withdrawn event.
      * @dev The balance is split between the storage provider and the redirected address based on the score. but for now its always 100% to SP
-     * @param to The address to withdraw the balance to.
+     * @param _to The address to withdraw the balance to.
      */
-    function withdraw(address to) public onlyRole(WITHDRAWER_ROLE) {
-        uint256 score = slaRegistry.score(provider);
+    function withdraw(address payable _to) public onlyRole(WITHDRAWER_ROLE) {
         uint256 amount = address(this).balance;
-        uint256 amountToSP = 0;
-        uint256 amountToBeRedirected = 0;
+        uint256 score = slaRegistry.score(provider);
+        (uint256 amountToSP, uint256 amountToBeRedirected) = _slashByScore(amount, score);
 
-        if (score >= 90) {
-            amountToSP = amount;
-        } else if (score > 80 && score < 90) {
-            amountToSP = amount * score / 100;
-            amountToBeRedirected = amount - amountToSP;
-        } else {
-            amountToSP = 0;
-            amountToBeRedirected = amount;
+        emit Withdrawn(_to, amountToSP, amountToBeRedirected);
+        (bool sent,) = _to.call{value: amount}("");
+        if (!sent) {
+            revert WithdrawalFailed();
         }
+    }
 
-        payable(to).transfer(amount);
-        emit Withdrawn(amountToSP, amountToBeRedirected);
+    /**
+     * @notice Slashes the amount by the given score.
+     * @dev The amount is slashed by the score.
+     * @param amount The amount to slash.
+     * @param score The score to slash by.
+     * @return amountToSP The amount to send to the storage provider.
+     * @return amountToBeRedirected The amount to send to the slash recipient address.
+     */
+    function _slashByScore(uint256 amount, uint256 score)
+        private
+        pure
+        returns (uint256 amountToSP, uint256 amountToBeRedirected)
+    {
+        if (score >= 90) {
+            return (amount, 0);
+        } else if (score > 80 && score < 90) {
+            uint256 amountSlashed = amount * score / 100;
+
+            return (amountSlashed, amount - amountSlashed);
+        } else {
+            return (0, amount);
+        }
     }
 
     /**

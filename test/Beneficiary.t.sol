@@ -9,6 +9,7 @@ import {MockProxy} from "../test/contracts/MockProxy.sol";
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {SLARegistry} from "../src/SLARegistry.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {RevertingReceiver} from "../test/contracts/RevertingReceiver.sol";
 
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
@@ -56,6 +57,12 @@ contract BeneficiaryTest is Test {
         assertTrue(beneficiary.hasRole(withdrawerRole, provider));
     }
 
+    function testIsManagerSetAsWithdrawerRoleAdmin() public view {
+        bytes32 managerRole = beneficiary.MANAGER_ROLE();
+        bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
+        assertTrue(beneficiary.getRoleAdmin(withdrawerRole) == managerRole);
+    }
+
     function testSetSlashRecipient() public {
         beneficiary.setSlashRecipient(address(0x123));
         assertEq(beneficiary.slashRecipient(), address(0x123));
@@ -82,8 +89,8 @@ contract BeneficiaryTest is Test {
         vm.startPrank(provider);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(10000, 0);
-        beneficiary.withdraw(address(0x123));
+        emit Beneficiary.Withdrawn(address(0x123), 10000, 0);
+        beneficiary.withdraw(payable(address(0x123)));
         assertEq(address(beneficiary).balance, 0);
     }
 
@@ -94,8 +101,8 @@ contract BeneficiaryTest is Test {
         vm.startPrank(providerWithAmberBandScore);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(8500, 1500);
-        beneficiary.withdraw(address(0x888));
+        emit Beneficiary.Withdrawn(address(0x888), 8500, 1500);
+        beneficiary.withdraw(payable(address(0x888)));
         assertEq(address(beneficiary).balance, 0);
     }
 
@@ -106,8 +113,8 @@ contract BeneficiaryTest is Test {
         vm.startPrank(providerWithRedBandScore);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(0, 10000);
-        beneficiary.withdraw(address(0x888));
+        emit Beneficiary.Withdrawn(address(0x888), 0, 10000);
+        beneficiary.withdraw(payable(address(0x888)));
         assertEq(address(beneficiary).balance, 0);
     }
 
@@ -120,37 +127,38 @@ contract BeneficiaryTest is Test {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, notWithdrawer, expectedRole
             )
         );
-        beneficiary.withdraw(address(0x123));
+        beneficiary.withdraw(payable(address(0x123)));
+    }
+
+    function testRevertsWithdrawalFailed() public {
+        address to = address(new RevertingReceiver());
+        vm.deal(address(beneficiary), 10000);
+        vm.startPrank(provider);
+        vm.expectRevert(abi.encodeWithSelector(Beneficiary.WithdrawalFailed.selector));
+        
+        beneficiary.withdraw(payable(to));
+        assertEq(address(beneficiary).balance, 10000);
     }
 
     function testSetWithdrawerRoleAndRevoke() public {
         bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
         vm.startPrank(provider);
 
-        beneficiary.grantWithdrawerRole(address(0x123));
+        beneficiary.grantRole(withdrawerRole, address(0x123));
         assertTrue(beneficiary.hasRole(withdrawerRole, address(0x123)));
-        beneficiary.revokeWithdrawerRole(address(0x123));
+        beneficiary.revokeRole(withdrawerRole, address(0x123));
         assertFalse(beneficiary.hasRole(withdrawerRole, address(0x123)));
     }
 
-    function testSetWithdrawerRoleRevertsWhenNotManager() public {
+    function testRevertsAccessControlWhenNotManagerWhenGrantingWithdrawerRole() public {
         address notManager = address(0x333);
-        bytes32 expectedRole = beneficiary.MANAGER_ROLE();
+        bytes32 managerRole = beneficiary.MANAGER_ROLE();
+        bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
         vm.prank(notManager);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notManager, expectedRole)
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notManager, managerRole)
         );
-        beneficiary.grantWithdrawerRole(address(0x123));
-    }
-
-    function testRevokeWithdrawerRoleRevertsWhenNotManager() public {
-        address notManager = address(0x123);
-        bytes32 expectedRole = beneficiary.MANAGER_ROLE();
-        vm.prank(notManager);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notManager, expectedRole)
-        );
-        beneficiary.revokeWithdrawerRole(address(0x123));
+        beneficiary.grantRole(withdrawerRole, address(0x123));
     }
 
     function testGetBeneficiaryForSP1() public {

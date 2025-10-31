@@ -219,19 +219,6 @@
   },
   {
     "type": "function",
-    "name": "grantWithdrawerRole",
-    "inputs": [
-      {
-        "name": "_withdrawer",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -328,19 +315,6 @@
   },
   {
     "type": "function",
-    "name": "revokeWithdrawerRole",
-    "inputs": [
-      {
-        "name": "_withdrawer",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setSlashRecipient",
     "inputs": [
       {
@@ -402,9 +376,9 @@
     "name": "withdraw",
     "inputs": [
       {
-        "name": "to",
+        "name": "_to",
         "type": "address",
-        "internalType": "address"
+        "internalType": "address payable"
       }
     ],
     "outputs": [],
@@ -516,15 +490,21 @@
     "name": "Withdrawn",
     "inputs": [
       {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
         "name": "amountToSP",
         "type": "uint256",
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256"
       },
       {
         "name": "amountToRedirected",
         "type": "uint256",
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256"
       }
     ],
@@ -617,6 +597,11 @@
   {
     "type": "error",
     "name": "NotInitializing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WithdrawalFailed",
     "inputs": []
   }
 ]
