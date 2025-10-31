@@ -219,6 +219,19 @@
   },
   {
     "type": "function",
+    "name": "grantWithdrawerRole",
+    "inputs": [
+      {
+        "name": "_withdrawer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -332,19 +345,6 @@
     "inputs": [
       {
         "name": "_slashRecipient",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setWithdrawerRole",
-    "inputs": [
-      {
-        "name": "_withdrawer",
         "type": "address",
         "internalType": "address"
       }
@@ -505,7 +505,7 @@
       {
         "name": "slashRecipient",
         "type": "address",
-        "indexed": false,
+        "indexed": true,
         "internalType": "address"
       }
     ],
@@ -518,13 +518,13 @@
       {
         "name": "amountToSP",
         "type": "uint256",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256"
       },
       {
         "name": "amountToRedirected",
         "type": "uint256",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256"
       }
     ],
