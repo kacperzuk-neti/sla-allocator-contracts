@@ -4,12 +4,16 @@ pragma solidity ^0.8.24;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
 
 /**
  * @title SLA Allocator
- * @notice
+ * @notice Upgradeable contract for SLA allocation with role-based access control
+ * @dev This contract is designed to be deployed as a proxy contract
  */
 contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using GetBeneficiary for uint64;
+
     /**
      * @notice Upgradable role which allows for contract upgrades
      */
@@ -31,6 +35,14 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+    }
+
+    /**
+     * @notice Grants DataCap to a miner
+     * @param minerID The numeric Filecoin miner actor id (uint64).
+     */
+    function grantDataCap(uint64 minerID) public view {
+        GetBeneficiary.validateExpiration(minerID);
     }
 
     // solhint-disable no-empty-blocks

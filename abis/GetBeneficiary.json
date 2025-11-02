@@ -1,0 +1,233 @@
+[
+  {
+    "type": "function",
+    "name": "getBeneficiary",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct MinerTypes.GetBeneficiaryReturn",
+        "components": [
+          {
+            "name": "active",
+            "type": "tuple",
+            "internalType": "struct MinerTypes.ActiveBeneficiary",
+            "components": [
+              {
+                "name": "beneficiary",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "term",
+                "type": "tuple",
+                "internalType": "struct MinerTypes.BeneficiaryTerm",
+                "components": [
+                  {
+                    "name": "quota",
+                    "type": "tuple",
+                    "internalType": "struct CommonTypes.BigInt",
+                    "components": [
+                      {
+                        "name": "val",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "neg",
+                        "type": "bool",
+                        "internalType": "bool"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "used_quota",
+                    "type": "tuple",
+                    "internalType": "struct CommonTypes.BigInt",
+                    "components": [
+                      {
+                        "name": "val",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "neg",
+                        "type": "bool",
+                        "internalType": "bool"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "expiration",
+                    "type": "int64",
+                    "internalType": "CommonTypes.ChainEpoch"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "proposed",
+            "type": "tuple",
+            "internalType": "struct MinerTypes.PendingBeneficiaryChange",
+            "components": [
+              {
+                "name": "new_beneficiary",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "new_quota",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.BigInt",
+                "components": [
+                  {
+                    "name": "val",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "neg",
+                    "type": "bool",
+                    "internalType": "bool"
+                  }
+                ]
+              },
+              {
+                "name": "new_expiration",
+                "type": "int64",
+                "internalType": "CommonTypes.ChainEpoch"
+              },
+              {
+                "name": "approved_by_beneficiary",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "approved_by_nominee",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "validateExpiration",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "validateQuota",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "ActorNotFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ExitCodeError",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ExpirationBelowFiveYears",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidActorID",
+    "inputs": [
+      {
+        "name": "actorId",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidCodec",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidResponseLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotEnoughBalance",
+    "inputs": [
+      {
+        "name": "balance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "QuotaCannotBeNegative",
+    "inputs": []
+  }
+]

@@ -64,6 +64,19 @@
   },
   {
     "type": "function",
+    "name": "grantDataCap",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "grantRole",
     "inputs": [
       {

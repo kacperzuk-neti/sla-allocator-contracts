@@ -658,27 +658,6 @@
   },
   {
     "type": "error",
-    "name": "InvalidResponseLength",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotEnoughBalance",
-    "inputs": [
-      {
-        "name": "balance",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "NotInitializing",
     "inputs": []
   },

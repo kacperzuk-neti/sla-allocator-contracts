@@ -8,6 +8,7 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
+import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
 
 /**
  * @title Beneficiary
@@ -158,22 +159,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     }
 
     // solhint-enable gas-strict-inequalities
-
-    /**
-     * @notice Retrieves the beneficiary information for a given miner actor ID.
-     * @dev Wraps the numeric minerID into a FilActorId and calls MinerAPI.getBeneficiary.
-     *      Reverts with ExitCodeError if the FVM call returns a non-zero exit code.
-     * @param minerID The numeric Filecoin miner actor id (uint64).
-     * @return beneficiaryData The MinerTypes.GetBeneficiaryReturn struct returned by the actor call.
-     */
-    function getBeneficiary(uint64 minerID) public view returns (MinerTypes.GetBeneficiaryReturn memory) {
-        (int256 exitCode, MinerTypes.GetBeneficiaryReturn memory beneficiaryData) =
-            MinerAPI.getBeneficiary(CommonTypes.FilActorId.wrap(minerID));
-        if (exitCode != 0) {
-            revert ExitCodeError(exitCode);
-        }
-        return beneficiaryData;
-    }
 
     /**
      * @notice Subbmit a change to the miner's beneficiary parameters by calling the Miner actor.

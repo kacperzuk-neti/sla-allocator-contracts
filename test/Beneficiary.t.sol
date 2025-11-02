@@ -15,6 +15,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {RevertingReceiver} from "../test/contracts/RevertingReceiver.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
+import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
 
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
@@ -169,28 +170,28 @@ contract BeneficiaryTest is Test {
     }
 
     function testGetBeneficiaryForSP1() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp1);
+        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP1);
         assertEq(result.active.beneficiary.data, hex"00904E");
     }
 
     function testGetBeneficiaryForSP2() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp2);
+        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP2);
         assertEq(result.active.beneficiary.data, hex"00B8C101");
     }
 
     function testGetBeneficiaryForSP3() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp3);
+        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP3);
         assertEq(result.active.beneficiary.data, hex"00C2A101");
     }
 
     function testGetBeneficiaryPendingChangeForSP3() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp3);
+        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP3);
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
     }
 
     function testGetBeneficiaryExpectRevertExitCodeError() public {
-        vm.expectRevert(abi.encodeWithSelector(Beneficiary.ExitCodeError.selector, 1));
-        beneficiary.getBeneficiary(12345);
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExitCodeError.selector));
+        GetBeneficiary.getBeneficiary(12345);
     }
 
     function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {
