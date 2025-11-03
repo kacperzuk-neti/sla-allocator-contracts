@@ -132,6 +132,56 @@
   },
   {
     "type": "function",
+    "name": "registerSLA",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "slaParams",
+        "type": "tuple",
+        "internalType": "struct SLARegistry.SLAParams",
+        "components": [
+          {
+            "name": "availability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "retrievability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "activationTime",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "termDays",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "sizeGiB",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -184,6 +234,50 @@
       }
     ],
     "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "sla",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "availability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "retrievability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "activationTime",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "termDays",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "sizeGiB",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -312,6 +406,25 @@
   },
   {
     "type": "event",
+    "name": "SLARegistered",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Upgraded",
     "inputs": [
       {
@@ -385,6 +498,22 @@
     "type": "error",
     "name": "NotInitializing",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SLAAlreadyRegistered",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
