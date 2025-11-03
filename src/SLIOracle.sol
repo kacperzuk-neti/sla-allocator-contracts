@@ -4,12 +4,13 @@ pragma solidity ^0.8.24;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 
 /**
  * @title SLI Oracle
  * @notice
  */
-contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, MulticallUpgradeable {
     /**
      * @notice Upgradable role which allows for contract upgrades
      */
@@ -29,6 +30,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     function initialize(address admin) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
+        __Multicall_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
     }
