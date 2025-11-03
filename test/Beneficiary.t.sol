@@ -70,7 +70,7 @@ contract BeneficiaryTest is Test {
 
     function testSetSlashRecipientEmitsEvent() public {
         vm.expectEmit(true, true, true, true);
-        emit Beneficiary.SlashReciptentUpdated(address(0x123));
+        emit Beneficiary.SlashRecipientUpdated(address(0x123));
         beneficiary.setSlashRecipient(address(0x123));
     }
 
@@ -101,7 +101,7 @@ contract BeneficiaryTest is Test {
         vm.startPrank(providerWithAmberBandScore);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(address(0x888), 8500, 1500);
+        emit Beneficiary.Withdrawn(address(0x888), 9000, 1000);
         beneficiary.withdraw(payable(address(0x888)));
         assertEq(address(beneficiary).balance, 0);
     }
@@ -113,7 +113,7 @@ contract BeneficiaryTest is Test {
         vm.startPrank(providerWithRedBandScore);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(address(0x888), 0, 10000);
+        emit Beneficiary.Withdrawn(address(0x888), 5000, 5000);
         beneficiary.withdraw(payable(address(0x888)));
         assertEq(address(beneficiary).balance, 0);
     }

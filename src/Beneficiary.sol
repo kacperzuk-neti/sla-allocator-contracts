@@ -41,10 +41,10 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     SLARegistry public slaRegistry;
 
     /**
-     * @notice Emits a SlashReciptentUpdated event.
+     * @notice Emits a SlashRecipientUpdated event.
      * @param slashRecipient The address to set as the slash recipient.
      */
-    event SlashReciptentUpdated(address indexed slashRecipient);
+    event SlashRecipientUpdated(address indexed slashRecipient);
 
     /**
      * @notice Emits a Withdrawn event.
@@ -89,13 +89,13 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     }
 
     /**
-     * @notice Emits a SlashReciptentUpdated event.
+     * @notice Emits a SlashRecipientUpdated event.
      * @param _slashRecipient The address to set as the slash recipient.
      * @dev Only the admin can set the slash recipient.
      */
     function setSlashRecipient(address _slashRecipient) public onlyRole(DEFAULT_ADMIN_ROLE) {
         slashRecipient = _slashRecipient;
-        emit SlashReciptentUpdated(_slashRecipient);
+        emit SlashRecipientUpdated(_slashRecipient);
     }
 
     /**
@@ -128,14 +128,14 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         pure
         returns (uint256 amountToSP, uint256 amountToBeRedirected)
     {
-        if (score >= 90) {
+        if (score >= 80) {
             return (amount, 0);
-        } else if (score > 80 && score < 90) {
-            uint256 amountSlashed = amount * score / 100;
-
-            return (amountSlashed, amount - amountSlashed);
+        } else if (score >= 40 && score < 80) {
+            uint256 amountSlashed = amount / 10;
+            return (amount - amountSlashed, amountSlashed);
         } else {
-            return (0, amount);
+            uint256 amountSlashed = amount / 2;
+            return (amount - amountSlashed, amountSlashed);
         }
     }
 

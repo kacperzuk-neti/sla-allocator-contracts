@@ -474,7 +474,7 @@
   },
   {
     "type": "event",
-    "name": "SlashReciptentUpdated",
+    "name": "SlashRecipientUpdated",
     "inputs": [
       {
         "name": "slashRecipient",

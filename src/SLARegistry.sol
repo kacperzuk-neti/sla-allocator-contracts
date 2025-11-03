@@ -51,10 +51,10 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      */
     function score(address provider) public pure returns (uint256) {
         if (provider == address(0x123)) {
-            return 85;
+            return 75;
         }
         if (provider == address(0x456)) {
-            return 40;
+            return 35;
         }
         return 95;
     }
