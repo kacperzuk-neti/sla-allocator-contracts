@@ -73,10 +73,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param provider The provider address
      * @param slaParams The SLA deal parameters
      */
-    function registerSLA(address client, address provider, SLAParams memory slaParams)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function registerSLA(address client, address provider, SLAParams memory slaParams) public {
         _checkSLARegistered(client, provider);
         slaParams.registered = true;
         sla[client][provider] = slaParams;

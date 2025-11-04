@@ -73,19 +73,8 @@ contract SLARegistryTest is Test {
     }
 
     function testSLARegisteredEventEmitted() public {
-        vm.prank(address(this));
         vm.expectEmit(true, true, true, true);
         emit SLARegistry.SLARegistered(client, provider);
-        slaRegistry.registerSLA(client, provider, slaParams);
-    }
-
-    function testRegisterSLARevertWhenNotAdmin() public {
-        address notAdmin = address(0x333);
-        bytes32 expectedRole = slaRegistry.DEFAULT_ADMIN_ROLE();
-        vm.prank(notAdmin);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
-        );
         slaRegistry.registerSLA(client, provider, slaParams);
     }
 }
