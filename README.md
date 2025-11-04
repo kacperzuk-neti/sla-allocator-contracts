@@ -275,7 +275,7 @@ Beneficiary->>Miner: Accept Change Beneficiary Proposal
 4. When do we allow **SP** to exit the system and change beneficiary address to one that's not a **Beneficiary** contract? Do we force waiting for all deals to end? For MVP lets leave an admin method that will allow this.
 5. Maybe we should drop **SLAAllocator** and implement all logic in **Client Smart Contract**?
 6. Should we check SLA score when allocating DC / making allocations? If yes, how do we handle the beginning, when there may be no data yet to correctly calculate score?
-7. Can SLA be changed once registered?
+7. Can SLA be changed once registered? Who's authorized to do that?
 8. When deals are finished, we should reduce the weight we give to given client when calculating SLA score for payout. How do we do that? Does FIP-0109 help here?
 9. Should we verify that beneficiary address is configured correctly when withdrawing rewards from **Beneficiary**?
 10. Who should handle changeBeneficiary process in **Beneficiary**? For now lets leave it to admin (a.k.a. slaAllocator governance team probably)
