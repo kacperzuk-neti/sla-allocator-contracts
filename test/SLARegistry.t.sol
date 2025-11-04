@@ -20,8 +20,9 @@ contract SLARegistryTest is Test {
         slaRegistry = SLARegistry(address(proxy));
         client = address(0x123);
         provider = address(0x456);
-        slaParams =
-            SLARegistry.SLAParams({availability: 99, latency: 99, indexing: 99, retention: 99, bandwidth: 99, stability: 99, registered: false});
+        slaParams = SLARegistry.SLAParams({
+            availability: 99, latency: 99, indexing: 99, retention: 99, bandwidth: 99, stability: 99, registered: false
+        });
     }
 
     function testIsAdminSet() public view {
@@ -44,8 +45,15 @@ contract SLARegistryTest is Test {
         vm.prank(address(this));
         slaRegistry.registerSLA(client, provider, slaParams);
 
-        (uint16 availability, uint16 latency, uint16 indexing, uint16 retention, uint16 bandwidth, uint16 stability, bool registered) =
-            slaRegistry.sla(client, provider);
+        (
+            uint16 availability,
+            uint16 latency,
+            uint16 indexing,
+            uint16 retention,
+            uint16 bandwidth,
+            uint16 stability,
+            bool registered
+        ) = slaRegistry.sla(client, provider);
 
         assertEq(availability, slaParams.availability);
         assertEq(latency, slaParams.latency);
