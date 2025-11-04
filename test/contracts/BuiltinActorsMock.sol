@@ -20,6 +20,9 @@ contract BuiltinActorsMock {
         if (methodNum == 4158972569 && target == 30000) {
             return abi.encode(0, 0x51, hex"82824400C2A101834203E8410A1A005B8D80854400D4C1014207D01A006ACFC0F5F4");
         }
+        if (methodNum == 4158972569 && target == 40000) {
+            return abi.encode(0, 0x51, hex"82824083404000F6");
+        }
         if (methodNum == 4158972569 && target == 12345) {
             // Simulate error exit code
             return abi.encode(1, 0x51, hex"82824083404000F6");
@@ -53,3 +56,8 @@ contract BuiltinActorsMock {
 // GetBeneficiaryReturn {
 //      ActiveBeneficiary active; beneficiary = f020674 term { quota: 1000, used_quota: 10, expiration: 6000000 }
 //      PendingBeneficiaryChange proposed; = { beneficiary = f024788, new_quota: 2000, new_expiration: 7000000, approved_by_beneficiary: true, approved_by_nominee: false } }
+
+// SP4 - 40000 - 82824083404000f6
+// GetBeneficiaryReturn {
+//      ActiveBeneficiary active; beneficiary = null term { quota: 0, used_quota: 0, expiration: 0 }
+//      PendingBeneficiaryChange proposed; = null

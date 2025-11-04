@@ -15,6 +15,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {RevertingReceiver} from "../test/contracts/RevertingReceiver.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
 
 contract BeneficiaryTest is Test {
@@ -25,9 +26,9 @@ contract BeneficiaryTest is Test {
     address public slaRegistry;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
-    uint64 internal sp1 = 10000;
-    uint64 internal sp2 = 20000;
-    uint64 internal sp3 = 30000;
+    CommonTypes.FilActorId SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
+    CommonTypes.FilActorId SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
+    CommonTypes.FilActorId SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();

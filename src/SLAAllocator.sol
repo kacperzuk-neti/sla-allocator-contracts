@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
 
 /**
@@ -12,7 +13,7 @@ import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
  * @dev This contract is designed to be deployed as a proxy contract
  */
 contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
-    using GetBeneficiary for uint64;
+    using GetBeneficiary for CommonTypes.FilActorId;
 
     /**
      * @notice Upgradable role which allows for contract upgrades
@@ -37,12 +38,20 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _grantRole(UPGRADER_ROLE, admin);
     }
 
+    // solhint-disable no-unused-vars
     /**
-     * @notice Grants DataCap to a miner
-     * @param minerID The numeric Filecoin miner actor id (uint64).
+     * @notice Grants DataCap to a client
+     * @param clientId The Client actor ID
+     * @param providerId The SP actor ID
+     * @param amount The amount of datacap to grant
      */
-    function grantDataCap(uint64 minerID) public view {
-        GetBeneficiary.validateExpiration(minerID);
+    function grantDataCap(CommonTypes.FilActorId clientId, CommonTypes.FilActorId providerId, uint256 amount) public view {
+        GetBeneficiary.getBeneficiaryWithChecks(
+            providerId,
+            true,
+            true,
+            true
+        );
     }
 
     // solhint-disable no-empty-blocks

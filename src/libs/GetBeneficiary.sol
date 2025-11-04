@@ -11,6 +11,7 @@ import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
  */
 library GetBeneficiary {
     error ExitCodeError();
+    error NoBeneficiarySet();
     error QuotaCannotBeNegative();
     error ExpirationBelowFiveYears();
 
@@ -24,12 +25,15 @@ library GetBeneficiary {
      * @notice Retrieves the beneficiary information for a given miner actor ID.
      * @dev Wraps the numeric minerID into a FilActorId and calls MinerAPI.getBeneficiary.
      *      Reverts with ExitCodeError if the FVM call returns a non-zero exit code.
-     * @param minerID The numeric Filecoin miner actor id (uint64).
+     * @param minerID The numeric Filecoin miner actor id.
      * @return beneficiaryData The MinerTypes.GetBeneficiaryReturn struct returned by the actor call.
      */
-    function getBeneficiary(uint64 minerID) public view returns (MinerTypes.GetBeneficiaryReturn memory) {
-        (int256 exitCode, MinerTypes.GetBeneficiaryReturn memory beneficiaryData) =
-            MinerAPI.getBeneficiary(CommonTypes.FilActorId.wrap(minerID));
+    function getBeneficiary(CommonTypes.FilActorId minerID)
+        internal
+        view
+        returns (MinerTypes.GetBeneficiaryReturn memory)
+    {
+        (int256 exitCode, MinerTypes.GetBeneficiaryReturn memory beneficiaryData) = MinerAPI.getBeneficiary(minerID);
         if (exitCode != 0) {
             revert ExitCodeError();
         }
@@ -37,25 +41,36 @@ library GetBeneficiary {
     }
 
     /**
-     * @notice Validates that the quota of the beneficiary associated with the given minerID is non-negative.
-     * @param minerID The numeric Filecoin miner actor id (uint64).
+     * @notice Retrieves the beneficiary information for a given miner actor ID with additional checks.
+     * @dev Performs optional checks on the beneficiary address, quota, and expiration.
+     *      Reverts with specific errors if any checks fail.
+     * @param minerID The Filecoin miner actor id.
+     * @param checkAddress If true, checks that the beneficiary address is set.
+     * @param checkQuota If true, checks that the quota is not negative.
+     * @param checkExpiration If true, checks that the expiration is at least 5 years.
+     * @return beneficiaryData The MinerTypes.GetBeneficiaryReturn struct returned by the actor call.
      */
-    function validateQuota(uint64 minerID) public view {
+    function getBeneficiaryWithChecks(
+        CommonTypes.FilActorId minerID,
+        bool checkAddress,
+        bool checkQuota,
+        bool checkExpiration
+    ) internal view returns (MinerTypes.GetBeneficiaryReturn memory) {
         MinerTypes.GetBeneficiaryReturn memory beneficiaryData = getBeneficiary(minerID);
-        if (beneficiaryData.active.term.quota.neg) {
-            revert QuotaCannotBeNegative();
-        }
-    }
 
-    /**
-     * @notice Validates that the expiration term of the beneficiary associated with the given minerID is at least 5 years.
-     * @param minerID The numeric Filecoin miner actor id (uint64).
-     */
-    function validateExpiration(uint64 minerID) public view {
-        MinerTypes.GetBeneficiaryReturn memory beneficiaryData = getBeneficiary(minerID);
-        int64 expirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
-        if (expirationEpoch < EXPIRATION_5_YEARS) {
-            revert ExpirationBelowFiveYears();
+        if (checkAddress) {
+            if (beneficiaryData.active.beneficiary.data.length == 0) revert NoBeneficiarySet();
         }
+
+        if (checkQuota) {
+            if (beneficiaryData.active.term.quota.neg) revert QuotaCannotBeNegative();
+        }
+
+        if (checkExpiration) {
+            int64 expirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
+            if (expirationEpoch < EXPIRATION_5_YEARS) revert ExpirationBelowFiveYears();
+        }
+
+        return beneficiaryData;
     }
 }

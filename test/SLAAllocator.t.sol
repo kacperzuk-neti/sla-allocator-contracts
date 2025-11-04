@@ -7,7 +7,7 @@ import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BuiltinActorsMock} from "../test/contracts/BuiltinActorsMock.sol";
 import {MockProxy} from "../test/contracts/MockProxy.sol";
-import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
 
 contract SLAAllocatorTest is Test {
@@ -15,9 +15,12 @@ contract SLAAllocatorTest is Test {
     BuiltinActorsMock public builtinActorsMock;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
-    uint64 SP1 = 10000;
-    uint64 SP2 = 20000;
-    uint64 SP3 = 30000;
+    CommonTypes.FilActorId SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
+    CommonTypes.FilActorId SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
+    CommonTypes.FilActorId SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
+    CommonTypes.FilActorId SP4 = CommonTypes.FilActorId.wrap(uint64(40000));
+    CommonTypes.FilActorId SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
+    CommonTypes.FilActorId client = CommonTypes.FilActorId.wrap(uint64(11111));
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();
@@ -48,13 +51,17 @@ contract SLAAllocatorTest is Test {
         slaAllocator.upgradeToAndCall(newImpl, "");
     }
 
-    function testGrantDataCapRevert() public {
+    function testGrantDataCapExpirationBelowFiveYearsRevert() public {
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExpirationBelowFiveYears.selector));
-        slaAllocator.grantDataCap(SP1);
+        slaAllocator.grantDataCap(client, SP1, 1);
+    }
+    
+    function testGrantDataCapNoBeneficiarySetRevert() public {
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.NoBeneficiarySet.selector));
+        slaAllocator.grantDataCap(client, SP4, 1);
     }
 
     function testGrantDataCapSucceed() public view {
-        slaAllocator.grantDataCap(SP2);
-        assertTrue(true);
+        slaAllocator.grantDataCap(client, SP2, 1);
     }
 }
