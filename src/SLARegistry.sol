@@ -41,10 +41,12 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      */
     struct SLAParams {
         uint16 availability;
-        uint16 retrievability;
-        uint16 activationTime;
-        uint64 termDays;
-        uint64 sizeGiB;
+        uint16 latency;
+        uint16 indexing;
+        uint16 retention;
+        uint16 bandwidth;
+        uint16 stability;
+        bool registered;
     }
 
     /**
@@ -76,6 +78,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         _checkSLARegistered(client, provider);
+        slaParams.registered = true;
         sla[client][provider] = slaParams;
         emit SLARegistered(client, provider);
     }
@@ -87,7 +90,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @dev Will revert if a SLA is already registered for the given client and provider
      */
     function _checkSLARegistered(address client, address provider) private view {
-        if (sla[client][provider].availability != 0) {
+        if (sla[client][provider].registered) {
             revert SLAAlreadyRegistered(client, provider);
         }
     }

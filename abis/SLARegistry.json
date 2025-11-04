@@ -155,24 +155,34 @@
             "internalType": "uint16"
           },
           {
-            "name": "retrievability",
+            "name": "latency",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "activationTime",
+            "name": "indexing",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "termDays",
-            "type": "uint64",
-            "internalType": "uint64"
+            "name": "retention",
+            "type": "uint16",
+            "internalType": "uint16"
           },
           {
-            "name": "sizeGiB",
-            "type": "uint64",
-            "internalType": "uint64"
+            "name": "bandwidth",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "stability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "registered",
+            "type": "bool",
+            "internalType": "bool"
           }
         ]
       }
@@ -257,24 +267,34 @@
         "internalType": "uint16"
       },
       {
-        "name": "retrievability",
+        "name": "latency",
         "type": "uint16",
         "internalType": "uint16"
       },
       {
-        "name": "activationTime",
+        "name": "indexing",
         "type": "uint16",
         "internalType": "uint16"
       },
       {
-        "name": "termDays",
-        "type": "uint64",
-        "internalType": "uint64"
+        "name": "retention",
+        "type": "uint16",
+        "internalType": "uint16"
       },
       {
-        "name": "sizeGiB",
-        "type": "uint64",
-        "internalType": "uint64"
+        "name": "bandwidth",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "stability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "registered",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"

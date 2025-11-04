@@ -21,7 +21,7 @@ contract SLARegistryTest is Test {
         client = address(0x123);
         provider = address(0x456);
         slaParams =
-            SLARegistry.SLAParams({availability: 99, retrievability: 99, activationTime: 5, termDays: 5, sizeGiB: 5});
+            SLARegistry.SLAParams({availability: 99, latency: 99, indexing: 99, retention: 99, bandwidth: 99, stability: 99, registered: false});
     }
 
     function testIsAdminSet() public view {
@@ -44,14 +44,16 @@ contract SLARegistryTest is Test {
         vm.prank(address(this));
         slaRegistry.registerSLA(client, provider, slaParams);
 
-        (uint16 availability, uint16 retrievability, uint16 activationTime, uint64 termDays, uint64 sizeGiB) =
+        (uint16 availability, uint16 latency, uint16 indexing, uint16 retention, uint16 bandwidth, uint16 stability, bool registered) =
             slaRegistry.sla(client, provider);
 
         assertEq(availability, slaParams.availability);
-        assertEq(retrievability, slaParams.retrievability);
-        assertEq(activationTime, slaParams.activationTime);
-        assertEq(termDays, slaParams.termDays);
-        assertEq(sizeGiB, slaParams.sizeGiB);
+        assertEq(latency, slaParams.latency);
+        assertEq(indexing, slaParams.indexing);
+        assertEq(retention, slaParams.retention);
+        assertEq(bandwidth, slaParams.bandwidth);
+        assertEq(stability, slaParams.stability);
+        assertEq(registered, true);
     }
 
     function testRegisterSLARevert() public {
