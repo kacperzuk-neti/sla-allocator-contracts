@@ -20,7 +20,7 @@ In practice, all mint allowance will immediately be used to mint DataCap to the 
 
 It will assign DC to a client under following conditions:
 1. It has enough mint allowance.
-2. **Client** has SLAs registered with all **SPs** that will be used in a compatible **SLARegistry** contract
+2. Sender, assumed to be the **Client**, has SLAs registered with all **SPs** that will be used in a compatible **SLARegistry** contract
 3. All **SPs** have a beneficiary set to an address contained in **Beneficiary Factory** registry, which effectively no quota (we require a very large quota to be set) and at least 5 year expiration time.
 
 There will be following roles in this contract:
@@ -41,7 +41,7 @@ interface SLAAllocator {
     function mintDataCap(uint256 amount) external onlyRole(MANAGER_ROLE);
     
     // request datacap based on SLAs
-    function requestDataCap(address client, SLA[] slas, uint256 amount) external;
+    function requestDataCap(SLA[] slas, uint256 amount) external;
     
     // administrative
     function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(ADMIN_ROLE);
@@ -156,6 +156,8 @@ interface SLARegistryInterface {
 ```
 interface FIDLSLARegistry is SLARegistryInterface {
     function initialize(address admin, address oracle) external;
+
+    // callable by the client or miner owner
     function registerSLA(address client, address provider, SLAParams slaParams) external;
 }
 ```
@@ -201,7 +203,7 @@ sequenceDiagram
   participant Miner@{ "type" : "collections" }
 
 note over Client,DataCap: Tx 1: Register SLA
-  Client->>SLARegistry: Submit SLA + deal parameters + SP list
+  Client->>SLARegistry: Submit SLA parameters + SP list
 
 note over Client,DataCap: Tx 2: Request DC
   Client->>SLAAllocator: Request DC based on SLA aggreement from registry
@@ -277,3 +279,4 @@ Beneficiary->>Miner: Accept Change Beneficiary Proposal
 8. When deals are finished, we should reduce the weight we give to given client when calculating SLA score for payout. How do we do that? Does FIP-0109 help here?
 9. Should we verify that beneficiary address is configured correctly when withdrawing rewards from **Beneficiary**?
 10. Who should handle changeBeneficiary process in **Beneficiary**? For now lets leave it to admin (a.k.a. slaAllocator governance team probably)
+11. Standardize on either `address` or `FilActorId` - which one?
