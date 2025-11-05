@@ -218,7 +218,6 @@ note over Client,DataCap: Tx 3: Make DDO Allocation
   Client->>ClientSC: Make DDO Allocation
   activate ClientSC
   ClientSC->>ClientSC: Verify SP
-  ClientSC->>Beneficiary: Notify about allocation for tracking SLA weights
   ClientSC->>DataCap: Make DDO Allocation
   deactivate ClientSC
 
