@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
-// import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
+import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 
 /**
  * @title GetBeneficiary
@@ -72,10 +72,10 @@ library GetBeneficiary {
         if (checkQuota) {
             if (beneficiaryData.active.term.quota.neg) revert QuotaCannotBeNegative();
 
-            // (uint256 quota,) = BigInts.toUint256(beneficiaryData.active.term.quota);
-            // (uint256 usedQuota,) = BigInts.toUint256(beneficiaryData.active.term.used_quota);
-            
-            // if (quota - usedQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
+            (uint256 quota,) = BigInts.toUint256(beneficiaryData.active.term.quota);
+            (uint256 usedQuota,) = BigInts.toUint256(beneficiaryData.active.term.used_quota);
+
+            if (quota - usedQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
         }
 
         if (checkExpiration) {
