@@ -55,10 +55,11 @@ interface SLAAllocator {
 
 Expected storage items:
 ```
-mapping(address provider => address client) providerClients; // temporary
+mapping(FilActorId[] provider => address client) providerClients; // temporary
+FilActorId[] providers; // temporary, for Oracle Service to know which providers to track
 address beneficiaryRegistry;
 address clientSmartContract;
-mapping(address client => mapping(address provider => address contract)) slaContracts;
+mapping(address client => mapping(FilActorId provider => address contract)) slaContracts;
 // and items inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
 ```
 
