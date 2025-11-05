@@ -118,7 +118,7 @@ Expected interface:
 ```
 interface Beneficiary {
     function initialize(address admin, address provider, address clientSmartContract, address slaAllocator, address burnAddress) external;
-    function withdraw(FilActorId recipient) external onlyRole(WITHDRAWER_ROLE);
+    function withdraw(FilAddress recipient) external onlyRole(WITHDRAWER_ROLE);
     
     receive();
     
