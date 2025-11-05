@@ -26,9 +26,11 @@ contract BeneficiaryTest is Test {
     address public slaRegistry;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
-    CommonTypes.FilActorId SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
-    CommonTypes.FilActorId SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
-    CommonTypes.FilActorId SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
+    // solhint-disable var-name-mixedcase
+    CommonTypes.FilActorId public SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
+    CommonTypes.FilActorId public SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
+    CommonTypes.FilActorId public SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
+    // solhint-enable var-name-mixedcase
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();

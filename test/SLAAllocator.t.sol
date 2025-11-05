@@ -15,13 +15,15 @@ contract SLAAllocatorTest is Test {
     BuiltinActorsMock public builtinActorsMock;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
-    CommonTypes.FilActorId SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
-    CommonTypes.FilActorId SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
-    CommonTypes.FilActorId SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
-    CommonTypes.FilActorId SP4 = CommonTypes.FilActorId.wrap(uint64(40000));
-    CommonTypes.FilActorId SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
-    CommonTypes.FilActorId SP6 = CommonTypes.FilActorId.wrap(uint64(60000));
-    CommonTypes.FilActorId client = CommonTypes.FilActorId.wrap(uint64(11111));
+    // solhint-disable var-name-mixedcase
+    CommonTypes.FilActorId public SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
+    CommonTypes.FilActorId public SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
+    CommonTypes.FilActorId public SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
+    CommonTypes.FilActorId public SP4 = CommonTypes.FilActorId.wrap(uint64(40000));
+    CommonTypes.FilActorId public SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
+    CommonTypes.FilActorId public SP6 = CommonTypes.FilActorId.wrap(uint64(60000));
+    CommonTypes.FilActorId public client = CommonTypes.FilActorId.wrap(uint64(11111));
+    // solhint-enable var-name-mixedcase
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();
