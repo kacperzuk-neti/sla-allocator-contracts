@@ -8,12 +8,20 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 contract SLARegistryTest is Test {
     SLARegistry public slaRegistry;
+    address public client;
+    address public provider;
+    SLARegistry.SLAParams public slaParams;
 
     function setUp() public {
         SLARegistry impl = new SLARegistry();
         bytes memory initData = abi.encodeWithSignature("initialize(address)", address(this));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         slaRegistry = SLARegistry(address(proxy));
+        client = address(0x123);
+        provider = address(0x456);
+        slaParams = SLARegistry.SLAParams({
+            availability: 99, latency: 99, indexing: 99, retention: 99, bandwidth: 99, stability: 99, registered: false
+        });
     }
 
     function testIsAdminSet() public view {
@@ -30,5 +38,42 @@ contract SLARegistryTest is Test {
         vm.prank(unauthorized);
         vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
         slaRegistry.upgradeToAndCall(newImpl, "");
+    }
+
+    function testRegisterSLA() public {
+        vm.prank(address(this));
+        slaRegistry.registerSLA(client, provider, slaParams);
+
+        (
+            uint16 availability,
+            uint16 latency,
+            uint16 indexing,
+            uint16 retention,
+            uint16 bandwidth,
+            uint16 stability,
+            bool registered
+        ) = slaRegistry.sla(client, provider);
+
+        assertEq(availability, slaParams.availability);
+        assertEq(latency, slaParams.latency);
+        assertEq(indexing, slaParams.indexing);
+        assertEq(retention, slaParams.retention);
+        assertEq(bandwidth, slaParams.bandwidth);
+        assertEq(stability, slaParams.stability);
+        assertEq(registered, true);
+    }
+
+    function testRegisterSLARevert() public {
+        vm.prank(address(this));
+        slaRegistry.registerSLA(client, provider, slaParams);
+
+        vm.expectRevert(abi.encodeWithSelector(SLARegistry.SLAAlreadyRegistered.selector, client, provider));
+        slaRegistry.registerSLA(client, provider, slaParams);
+    }
+
+    function testSLARegisteredEventEmitted() public {
+        vm.expectEmit(true, true, true, true);
+        emit SLARegistry.SLARegistered(client, provider);
+        slaRegistry.registerSLA(client, provider, slaParams);
     }
 }

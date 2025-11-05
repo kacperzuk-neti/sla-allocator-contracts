@@ -16,6 +16,40 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
+     * @notice Mapping of client to provider to SLA parameters
+     * @dev The key is a tuple of client and provider addresses
+     * @dev The value is a struct containing the SLA parameters
+     */
+    mapping(address client => mapping(address provider => SLAParams)) public sla;
+
+    /**
+     * @notice Event emitted when a new SLA is registered for a given client and provider
+     * @param client The client address
+     * @param provider The provider address
+     */
+    event SLARegistered(address indexed client, address indexed provider);
+
+    /**
+     * @notice Error emitted when a SLA is already registered for a given client and provider
+     * @param client The client address
+     * @param provider The provider address
+     */
+    error SLAAlreadyRegistered(address client, address provider);
+
+    /**
+     * @notice Struct containing the SLA deal parameters
+     */
+    struct SLAParams {
+        uint16 availability;
+        uint16 latency;
+        uint16 indexing;
+        uint16 retention;
+        uint16 bandwidth;
+        uint16 stability;
+        bool registered;
+    }
+
+    /**
      * @notice Disabled constructor (proxy pattern)
      */
     constructor() {
@@ -31,6 +65,31 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+    }
+
+    /**
+     * @notice Register a new SLA for a given client and provider
+     * @param client The client address
+     * @param provider The provider address
+     * @param slaParams The SLA deal parameters
+     */
+    function registerSLA(address client, address provider, SLAParams memory slaParams) public {
+        _checkSLARegistered(client, provider);
+        slaParams.registered = true;
+        sla[client][provider] = slaParams;
+        emit SLARegistered(client, provider);
+    }
+
+    /**
+     * @notice Check if a SLA is already registered for a given client and provider
+     * @param client The client address
+     * @param provider The provider address
+     * @dev Will revert if a SLA is already registered for the given client and provider
+     */
+    function _checkSLARegistered(address client, address provider) private view {
+        if (sla[client][provider].registered) {
+            revert SLAAlreadyRegistered(client, provider);
+        }
     }
 
     // solhint-disable no-empty-blocks
