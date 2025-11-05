@@ -26,6 +26,7 @@ contract SLIOracleTest is Test {
         address newImpl = address(new SLIOracle());
         address unauthorized = vm.addr(1);
         bytes32 upgraderRole = sliOracle.UPGRADER_ROLE();
+        // solhint-disable-next-line gas-small-strings
         bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
 
         vm.prank(unauthorized);

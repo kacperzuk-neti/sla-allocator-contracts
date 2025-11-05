@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT
+// solhint-disable use-natspec
+
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
@@ -19,9 +21,9 @@ contract BeneficiaryTest is Test {
     address public slaRegistry;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
-    uint64 SP1 = 10000;
-    uint64 SP2 = 20000;
-    uint64 SP3 = 30000;
+    uint64 internal sp1 = 10000;
+    uint64 internal sp2 = 20000;
+    uint64 internal sp3 = 30000;
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();
@@ -36,8 +38,10 @@ contract BeneficiaryTest is Test {
 
     function setupBeneficiary(address _admin, address _provider, address _slaRegistry) public returns (Beneficiary) {
         Beneficiary impl = new Beneficiary();
+        // solhint-disable gas-small-strings
         bytes memory initData =
             abi.encodeWithSignature("initialize(address,address,address)", _admin, _provider, _slaRegistry);
+        // solhint-enable gas-small-strings
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         return Beneficiary(address(proxy));
     }
@@ -162,22 +166,22 @@ contract BeneficiaryTest is Test {
     }
 
     function testGetBeneficiaryForSP1() public {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(SP1);
+        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp1);
         assertEq(result.active.beneficiary.data, hex"00904E");
     }
 
     function testGetBeneficiaryForSP2() public {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(SP2);
+        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp2);
         assertEq(result.active.beneficiary.data, hex"00B8C101");
     }
 
     function testGetBeneficiaryForSP3() public {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(SP3);
+        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp3);
         assertEq(result.active.beneficiary.data, hex"00C2A101");
     }
 
     function testGetBeneficiaryPendingChangeForSP3() public {
-        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(SP3);
+        MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp3);
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
     }
 
