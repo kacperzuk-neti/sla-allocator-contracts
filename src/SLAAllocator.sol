@@ -13,8 +13,6 @@ import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
  * @dev This contract is designed to be deployed as a proxy contract
  */
 contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
-    using GetBeneficiary for CommonTypes.FilActorId;
-
     /**
      * @notice Upgradable role which allows for contract upgrades
      */
@@ -45,13 +43,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param providerId The SP actor ID
      * @param amount The amount of datacap to grant
      */
-    function grantDataCap(CommonTypes.FilActorId clientId, CommonTypes.FilActorId providerId, uint256 amount) public view {
-        GetBeneficiary.getBeneficiaryWithChecks(
-            providerId,
-            true,
-            true,
-            true
-        );
+    function grantDataCap(CommonTypes.FilActorId clientId, CommonTypes.FilActorId providerId, uint256 amount)
+        public
+        view
+    {
+        GetBeneficiary.getBeneficiaryWithChecks(providerId, true, true, true);
     }
 
     // solhint-disable no-empty-blocks

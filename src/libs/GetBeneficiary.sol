@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
+import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 
 /**
  * @title GetBeneficiary
@@ -14,12 +15,18 @@ library GetBeneficiary {
     error NoBeneficiarySet();
     error QuotaCannotBeNegative();
     error ExpirationBelowFiveYears();
+    error QuotaNotUnlimited();
 
     /**
      * @notice Expiration time of 5 years in Filecoin epochs (assuming 30s epochs)
      * @dev 5 years = 5 * 365 * 24 * 60 * 60 seconds / 30 seconds per epoch = 5,256,000 epochs
      */
     int64 private constant EXPIRATION_5_YEARS = 5_256_000;
+
+    /**
+     * @notice Minimum beneficiary quota constant.
+     */
+    uint256 private constant MIN_BENEFICIARY_QUOTA = 195884047900000000000000000000;
 
     /**
      * @notice Retrieves the beneficiary information for a given miner actor ID.
@@ -64,11 +71,17 @@ library GetBeneficiary {
 
         if (checkQuota) {
             if (beneficiaryData.active.term.quota.neg) revert QuotaCannotBeNegative();
+
+            // (uint256 quota,) = BigInts.toUint256(beneficiaryData.active.term.quota);
+            // (uint256 usedQuota,) = BigInts.toUint256(beneficiaryData.active.term.used_quota);
+            
+            // if (quota - usedQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
         }
 
         if (checkExpiration) {
+            int64 currentEpoch = int64(uint64(block.timestamp / 30));
             int64 expirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
-            if (expirationEpoch < EXPIRATION_5_YEARS) revert ExpirationBelowFiveYears();
+            if (expirationEpoch < currentEpoch + EXPIRATION_5_YEARS) revert ExpirationBelowFiveYears();
         }
 
         return beneficiaryData;

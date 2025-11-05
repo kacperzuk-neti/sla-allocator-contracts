@@ -55,13 +55,23 @@ contract SLAAllocatorTest is Test {
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExpirationBelowFiveYears.selector));
         slaAllocator.grantDataCap(client, SP1, 1);
     }
-    
+
     function testGrantDataCapNoBeneficiarySetRevert() public {
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.NoBeneficiarySet.selector));
         slaAllocator.grantDataCap(client, SP4, 1);
     }
 
+    function testGrantDataCapQuotaCannotBeNegativeRevert() public {
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaCannotBeNegative.selector));
+        slaAllocator.grantDataCap(client, SP5, 1);
+    }
+
     function testGrantDataCapSucceed() public view {
         slaAllocator.grantDataCap(client, SP2, 1);
+    }
+
+    function testGetBeneficiaryExpectRevertExitCodeError() public {
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExitCodeError.selector));
+        slaAllocator.grantDataCap(client, CommonTypes.FilActorId.wrap(uint64(12345)), 1);
     }
 }

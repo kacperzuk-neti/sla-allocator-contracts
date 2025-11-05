@@ -18,5 +18,10 @@
     "type": "error",
     "name": "QuotaCannotBeNegative",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaNotUnlimited",
+    "inputs": []
   }
 ]

@@ -23,6 +23,9 @@ contract BuiltinActorsMock {
         if (methodNum == 4158972569 && target == 40000) {
             return abi.encode(0, 0x51, hex"82824083404000F6");
         }
+        if (methodNum == 4158972569 && target == 50000) {
+            return abi.encode(0, 0x51, hex"82824400C2A101834201FF410A1A005B8D80854400D4C1014207D01A006ACFC0F5F4");
+        }
         if (methodNum == 4158972569 && target == 12345) {
             // Simulate error exit code
             return abi.encode(1, 0x51, hex"82824083404000F6");
