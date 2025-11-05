@@ -17,6 +17,35 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
+     * @notice Oracle role which allows to update SLI values
+     */
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+
+    /**
+     * @notice Struct containing all SLI metrics for a provider and a block number it was last updated
+     */
+    struct SLIAttestation {
+        uint256 lastUpdate;
+        uint16 availability;
+        uint16 latency;
+        uint16 indexing;
+        uint16 retention;
+        uint16 bandwidth;
+        uint16 stability;
+    }
+    /**
+     * @notice Mapping of provider addresses to their SLI attestations
+     */
+    mapping(address provider => SLIAttestation attestation) public attestations;
+
+    /**
+     * @notice Emitted when SLI values are updated for a provider
+     * @param provider Address of the provider
+     * @param slis New SLI values
+     */
+    event SLIAttestationUpdate(address indexed provider, SLIAttestation indexed slis);
+
+    /**
      * @notice Disabled constructor (proxy pattern)
      */
     constructor() {
@@ -26,13 +55,25 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
     /**
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
+     * @param oracle Address that will get ORACLE_ROLE
      */
-    function initialize(address admin) public initializer {
+    function initialize(address admin, address oracle) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __Multicall_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+        _grantRole(ORACLE_ROLE, oracle);
+    }
+
+    /**
+     * @notice Sets SLI values for a provider
+     * @param provider Address of the provider
+     * @param slis New SLI values
+     */
+    function setSLI(address provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE) {
+        emit SLIAttestationUpdate(provider, slis);
+        attestations[provider] = slis;
     }
 
     // solhint-disable no-empty-blocks
