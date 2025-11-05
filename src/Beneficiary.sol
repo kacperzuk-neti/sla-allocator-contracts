@@ -6,6 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
+import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 
 /**
@@ -56,9 +57,24 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     event Withdrawn(address indexed to, uint256 amountToSP, uint256 amountToRedirected);
 
     /**
-     * @notice Error thrown when the exit code is not zero.
+     * @notice Emitted when changeBeneficiary proposal is approved
+     * @param minerID The miner actor id to change the beneficiary for
+     * @param newBeneficiary The Filecoin address of the new beneficiary
+     * @param newQuota The new quota (FIL atto) value passed through
+     * @param newExpirationChainEpoch The new expiration chain epoch
      */
-    error ExitCodeError();
+    event BeneficiaryProposalSigned(
+        CommonTypes.FilActorId indexed minerID,
+        CommonTypes.FilAddress indexed newBeneficiary,
+        uint256 newQuota,
+        int64 newExpirationChainEpoch
+    );
+
+    /**
+     * @notice Error thrown when the FVM call returns a non-zero exit code.
+     * @param exitCode The exit code returned by the FVM call.
+     */
+    error ExitCodeError(int256 exitCode);
 
     /**
      * @notice Error thrown when the withdrawal fails.
@@ -154,8 +170,39 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         (int256 exitCode, MinerTypes.GetBeneficiaryReturn memory beneficiaryData) =
             MinerAPI.getBeneficiary(CommonTypes.FilActorId.wrap(minerID));
         if (exitCode != 0) {
-            revert ExitCodeError();
+            revert ExitCodeError(exitCode);
         }
         return beneficiaryData;
     }
+
+    /**
+     * @notice Subbmit a change to the miner's beneficiary parameters by calling the Miner actor.
+     * @dev Builds MinerTypes.ChangeBeneficiaryParams and calls MinerAPI.changeBeneficiary.
+     *      Emits BeneficiaryChanged  and reverts with ExitCodeError if the actor call returns non-zero.
+     *      Only callable by DEFAULT_ADMIN_ROLE.
+     * @param minerID The miner actor id to change the beneficiary for
+     * @param newBeneficiary The new beneficiary FilAddress
+     * @param newQuota The new quota as uint256 (FIL atto)
+     * @param newExpirationChainEpoch The new expiration chain epoch (int64)
+     */
+    function changeBeneficiary(
+        CommonTypes.FilActorId minerID,
+        CommonTypes.FilAddress memory newBeneficiary,
+        uint256 newQuota,
+        int64 newExpirationChainEpoch
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        MinerTypes.ChangeBeneficiaryParams memory params =
+            MinerTypes.ChangeBeneficiaryParams({
+                new_beneficiary: newBeneficiary,
+                new_quota: BigInts.fromUint256(newQuota),
+                new_expiration: CommonTypes.ChainEpoch.wrap(newExpirationChainEpoch)
+            });
+        emit BeneficiaryProposalSigned(minerID, newBeneficiary, newQuota, newExpirationChainEpoch);
+        int256 exitCode = MinerAPI.changeBeneficiary(minerID, params);
+        if (exitCode != 0) {
+            revert ExitCodeError(exitCode);
+        }
+    }
+
+    receive() external payable {}
 }

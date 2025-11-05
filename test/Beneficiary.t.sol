@@ -9,9 +9,12 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {BuiltinActorsMock} from "../test/contracts/BuiltinActorsMock.sol";
 import {MockProxy} from "../test/contracts/MockProxy.sol";
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {SLARegistry} from "../src/SLARegistry.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {RevertingReceiver} from "../test/contracts/RevertingReceiver.sol";
+import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
+import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
 
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
@@ -43,7 +46,7 @@ contract BeneficiaryTest is Test {
             abi.encodeWithSignature("initialize(address,address,address)", _admin, _provider, _slaRegistry);
         // solhint-enable gas-small-strings
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
-        return Beneficiary(address(proxy));
+        return Beneficiary(payable(address(proxy)));
     }
 
     function testIsAdminSet() public view {
@@ -165,28 +168,69 @@ contract BeneficiaryTest is Test {
         beneficiary.grantRole(withdrawerRole, address(0x123));
     }
 
-    function testGetBeneficiaryForSP1() public {
+    function testGetBeneficiaryForSP1() public view {
         MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp1);
         assertEq(result.active.beneficiary.data, hex"00904E");
     }
 
-    function testGetBeneficiaryForSP2() public {
+    function testGetBeneficiaryForSP2() public view {
         MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp2);
         assertEq(result.active.beneficiary.data, hex"00B8C101");
     }
 
-    function testGetBeneficiaryForSP3() public {
+    function testGetBeneficiaryForSP3() public view {
         MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp3);
         assertEq(result.active.beneficiary.data, hex"00C2A101");
     }
 
-    function testGetBeneficiaryPendingChangeForSP3() public {
+    function testGetBeneficiaryPendingChangeForSP3() public view {
         MinerTypes.GetBeneficiaryReturn memory result = beneficiary.getBeneficiary(sp3);
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
     }
 
     function testGetBeneficiaryExpectRevertExitCodeError() public {
-        vm.expectRevert(abi.encodeWithSelector(Beneficiary.ExitCodeError.selector));
+        vm.expectRevert(abi.encodeWithSelector(Beneficiary.ExitCodeError.selector, 1));
         beneficiary.getBeneficiary(12345);
+    }
+
+    function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {
+        vm.expectRevert(abi.encodeWithSelector(Actor.InvalidResponseLength.selector));
+        beneficiary.changeBeneficiary(
+            CommonTypes.FilActorId.wrap(12345), FilAddresses.fromBytes(hex"00fb07"), 1000, 6000000
+        );
+    }
+
+    function testChangeBeneficiaryExpectRevertExitCodeError() public {
+        vm.expectRevert(abi.encodeWithSelector(Beneficiary.ExitCodeError.selector, 1));
+        beneficiary.changeBeneficiary(
+            CommonTypes.FilActorId.wrap(10000), FilAddresses.fromBytes(hex"00fb07"), 1000, 6000000
+        );
+    }
+
+    function testChangeBeneficiaryEmitEvent() public {
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.BeneficiaryProposalSigned(
+            CommonTypes.FilActorId.wrap(20000), FilAddresses.fromBytes(hex"00fb07"), 1000, 6000000
+        );
+        beneficiary.changeBeneficiary(
+            CommonTypes.FilActorId.wrap(20000), FilAddresses.fromBytes(hex"00fb07"), 1000, 6000000
+        );
+    }
+
+    // solhint-disable-next-line no-empty-blocks
+    function testChangeBeneficiaryCalldata() public {
+        // FIXME verify that miner is called correctly for changeBeneficiary
+    }
+
+    function testChangeBeneficiaryRevertWhenNotAdmin() public {
+        address notAdmin = address(0x333);
+        bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
+        vm.prank(notAdmin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
+        );
+        beneficiary.changeBeneficiary(
+            CommonTypes.FilActorId.wrap(20000), FilAddresses.fromBytes(hex"00fb07"), 1000, 6000000
+        );
     }
 }

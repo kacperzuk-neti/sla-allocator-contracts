@@ -24,6 +24,17 @@ contract BuiltinActorsMock {
             // Simulate error exit code
             return abi.encode(1, 0x51, hex"82824083404000F6");
         }
+        if (methodNum == 1570634796 && target == 12345) {
+            // Simulate error inside MienerAPI.changeBeneficiary
+            return abi.encode(0, 0x51, hex"00");
+        }
+        if (methodNum == 1570634796 && target == 10000) {
+            // Simulate error exit code
+            return abi.encode(1, 0x00, "");
+        }
+        if (methodNum == 1570634796 && target == 20000) {
+            return abi.encode(0, 0x00, "");
+        }
         revert MethodNotFound();
     }
 }
