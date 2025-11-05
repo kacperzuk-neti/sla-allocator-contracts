@@ -12,7 +12,9 @@ We expect following actors and contracts in the system:
 9. **Oracle** - smart contract that stores off-chain data regarding SLIs for providers. There may be many or none - **SLARegistry** contracts decide which oracles and how they want to use.
 10. **Oracle Service** - off-chain service that submits transactions that update SLIs in the **Oracle**
 11. **Beneficiary Factory** - singleton contract that deploys new instances of **Beneficiary** contract for storage providers, keeping a registry of those already deployed.
-  
+
+For now we enforce that SP works with just a single client.
+
 ## SLAAllocator
 
 **SLAAllocator** contract acts as a Verified Registry Verifier. It has a right to mint DataCap to clients.
@@ -22,6 +24,7 @@ It will assign DC to a client under following conditions:
 1. It has enough mint allowance.
 2. Sender, assumed to be the **Client**, has SLAs registered with all **SPs** that will be used in a compatible **SLARegistry** contract
 3. All **SPs** have a beneficiary set to an address contained in **Beneficiary Factory** registry, which effectively no quota (we require a very large quota to be set) and at least 5 year expiration time.
+4. (temporary) **SPs** weren't registered with a different **Client** before.
 
 There will be following roles in this contract:
 * `ADMIN`, who can manage other roles and upgrade the contract
@@ -52,6 +55,7 @@ interface SLAAllocator {
 
 Expected storage items:
 ```
+mapping(address provider => address client) providerClients; // temporary
 address beneficiaryRegistry;
 address clientSmartContract;
 mapping(address client => mapping(address provider => address contract)) slaContracts;
@@ -60,13 +64,12 @@ mapping(address client => mapping(address provider => address contract)) slaCont
 
 ## Client Smart Contract
 
-**Client Smart Contract** acts as a Verified Registry Client. It has a DataCap and may transfer it to Verifreg to create Allocations.
+**Client Smart Contract** acts as a Verified Registry Client. It has DataCap and may transfer it to Verifreg to create Allocations.
 
-The main function it will implement is `transfer`, which copies the interface of DataCap and expects a transfer of DC to Verifreg with Verifreg-compatible operator data. See [FIDL Client Smart Contract](https://github.com/fidlabs/contract-metaallocator/blob/main/src/Client.sol#L71) for reference. It will transfer the DataCap and create allocations under following conditions:
+The main function it will implement is `transfer`, which copies the interface of DataCap and expects a transfer of DC to Verifreg with Verifreg-compatible operator data. See [FIDL Client Smart Contract](https://github.com/fidlabs/contract-metaallocator/blob/main/src/Client.sol#L71) for reference. It will transfer DataCap and create allocations under following conditions:
 1. **Client Smart Contract** has enough DataCap
 2. **Client** has enough allowance left to spend with given **SP**
 3. **SP** has correct configuration of beneficiary (address from registry, unlimited quota, adequate expiration)
-It will also track how much given **Client** spent with given **SP** so that **Beneficiary** can reference it when calculating weights for payout.
 
 There will be following roles in this contract:
 * `ADMIN`, who can manage other roles and upgrade the contract
@@ -88,15 +91,9 @@ interface Client {
 
 Expected storage items:
 ```
-struct SPClient {
-    address client;
-    uint256 amountSpent;
-}
-
 address beneficiaryRegistry;
 address slaAllocatorContract;
 mapping(address client => mapping(address provider => uint256 amount)) allowances;
-mapping(address provider => SPClient client) spClients;
 // and items inherited from OpenZeppelin's AccessControl, UUPSUpgradeable and Multicall
 ```
 
@@ -105,10 +102,9 @@ mapping(address provider => SPClient client) spClients;
 **Beneficiary** contract acts as the beneficiary for **Miner** - it receives mining rewards. It will enforce SLA rules by reducing the amount of rewards being paid out to **SP** in case SLAs are breached.
 
 The main function implemented by the contract is `withdraw`. It allows withdrawing collected mining rewards based on the SLA. The SLA is calculated by:
-1. Fetching list of **Clients** and how much they spent with **SP** from **Client Smart Contract**
-2. Fetching **SLARegistry** address for each **Client** from **SLAAllocator**
-3. Fetching SLA Score of each **Client** from **SLARegistries**
-4. Calculating weighted average of scores based on how much each client spent with **SP**
+1. Fetching **SP's** **Client** from **SLAAllocator**
+2. Fetching **SLARegistry** address of the **Client** from **SLAAllocator**
+3. Fetching SLA Score of the **Client** from **SLARegistrys**
 
 There will be following roles in this contract:
 * `ADMIN`, who can manage addresses and other roles
@@ -117,7 +113,7 @@ There will be following roles in this contract:
 Expected interface:
 ```
 interface Beneficiary {
-    function initialize(address admin, address provider, address clientSmartContract, address slaAllocator, address burnAddress) external;
+    function initialize(address admin, address provider, address slaAllocator, address burnAddress) external;
     function withdraw(FilActorId recipient) external onlyRole(WITHDRAWER_ROLE);
     
     receive();
@@ -125,7 +121,6 @@ interface Beneficiary {
     function changeBeneficiary(CommonTypes.FilActorId minerId, CommonTypes.FilAddresses newBeneficiary, uint256 newQuota, int64 newExpirationChainEpoch) external onlyRole(ADMIN_ROLE);
 
     // administrative
-    function setClientSmartContract(address new) external onlyRole(ADMIN_ROLE);
     function setSLAAllocator(address new) external onlyRole(ADMIN_ROLE);
     function setBurnAddress(address new) external onlyRole(ADMIN_ROLE);
     // and functions inherited from OpenZeppelin's AccessControl
@@ -134,7 +129,6 @@ interface Beneficiary {
 
 Expected storage items:
 ```
-address clientSmartContract;
 address slaAllocatorContract;
 address burnAddress;
 // and items inherited from OpenZeppelin's AccessControl, UUPSUpgradeable and Multicall
@@ -218,7 +212,6 @@ note over Client,DataCap: Tx 3: Make DDO Allocation
   Client->>ClientSC: Make DDO Allocation
   activate ClientSC
   ClientSC->>ClientSC: Verify SP
-  ClientSC->>Beneficiary: Notify about allocation for tracking SLA weights
   ClientSC->>DataCap: Make DDO Allocation
   deactivate ClientSC
 
@@ -230,17 +223,13 @@ note over Client,DataCap: Tx 5: Withdraw funds
   SP->>Beneficiary: Request withdrawal
   activate Beneficiary
   
-  Beneficiary->>ClientSC: Fetch SP's clients & weights
-  loop Repeat for all clients
+  Beneficiary->>SLAAllocator: Fetch SP clients
   Beneficiary->>SLAAllocator: Get SLA contract for client/provider pair
   Beneficiary->>SLARegistry: Compute SLA Score
   activate SLARegistry
   SLARegistry->>Oracle: Fetch SLIs
   SLARegistry-->>Beneficiary: Return SLAScore
   deactivate SLARegistry
-  end
-  
-  Beneficiary->>Beneficiary: Calculate weighted avg SLA score
 
   Beneficiary->>SP: Payout based on the SLA Score
   deactivate Beneficiary
@@ -261,22 +250,3 @@ SP->>Miner: Propose Change Beneficiary
 Gov->>Beneficiary: Accept Change Beneficiary Proposal
 Beneficiary->>Miner: Accept Change Beneficiary Proposal
 ```
-
-## Known issues
-
-1. Weights of clients should be updated when allocations are claimed, not when they're created. FIP-0109 will allow that.
-
-## Unanswered questions
-
-1. **SLAAllocator** rate-limit? How do we prevent draining all funds from the allocator/client smart contract? Someone may register SLAs, request datacap, make allocations and then do nothing with them.
-3. Requirements on the beneficiary configuration during datacap allocation by **SLAAllocator**:
-    1. Do we just hardcode a minimum expiration? If yes, how long? For MVP lets just require 5+ years.
-    2. Do we maybe not require it at all at this time and only check it when making allocation with **Client Smart Contract**, making sure its set for at least as long as the deal will live?
-4. When do we allow **SP** to exit the system and change beneficiary address to one that's not a **Beneficiary** contract? Do we force waiting for all deals to end? For MVP lets leave an admin method that will allow this.
-5. Maybe we should drop **SLAAllocator** and implement all logic in **Client Smart Contract**?
-6. Should we check SLA score when allocating DC / making allocations? If yes, how do we handle the beginning, when there may be no data yet to correctly calculate score?
-7. Can SLA be changed once registered? Who's authorized to do that?
-8. When deals are finished, we should reduce the weight we give to given client when calculating SLA score for payout. How do we do that? Does FIP-0109 help here?
-9. Should we verify that beneficiary address is configured correctly when withdrawing rewards from **Beneficiary**?
-10. Who should handle changeBeneficiary process in **Beneficiary**? For now lets leave it to admin (a.k.a. slaAllocator governance team probably)
-11. Standardize on either `address` or `FilActorId` - which one?
