@@ -79,7 +79,7 @@ library GetBeneficiary {
         }
 
         if (checkExpiration) {
-            int64 currentEpoch = int64(uint64(block.timestamp / 30));
+            int64 currentEpoch = int64(uint64(block.number));
             int64 expirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
             if (expirationEpoch < currentEpoch + EXPIRATION_5_YEARS) revert ExpirationBelowFiveYears();
         }
