@@ -28,7 +28,7 @@ jobs:
         run: npm install -g solhint@^4.5
 
       - name: Run solhint
-        run: solhint 'src/**/*.sol' 'test/**/*.sol' 'script/**/*.sol'
+        run: solhint 'src/**/*.sol' 'test/**/*.sol' 'script/**/*.sol' --max-warnings 0
 
   build_and_test:
     strategy:

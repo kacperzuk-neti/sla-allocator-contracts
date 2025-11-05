@@ -46,6 +46,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     event SlashRecipientUpdated(address indexed slashRecipient);
 
+    // solhint-disable gas-indexed-events
     /**
      * @notice Emits a Withdrawn event.
      * @param to The address to withdraw the balance to.
@@ -115,6 +116,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         }
     }
 
+    // solhint-disable gas-strict-inequalities
     /**
      * @notice Slashes the amount by the given score.
      * @dev The amount is slashed by the score.
@@ -138,6 +140,8 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
             return (amount - amountSlashed, amountSlashed);
         }
     }
+
+    // solhint-enable gas-strict-inequalities
 
     /**
      * @notice Retrieves the beneficiary information for a given miner actor ID.

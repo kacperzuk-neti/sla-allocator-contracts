@@ -6,8 +6,10 @@ pragma solidity 0.8.25;
 contract BuiltinActorsMock {
     error MethodNotFound();
 
+    receive() external payable {}
+
     // solhint-disable-next-line no-complex-fallback
-    fallback(bytes calldata data) external returns (bytes memory) {
+    fallback(bytes calldata data) external payable returns (bytes memory) {
         (uint256 methodNum,,,,, uint64 target) = abi.decode(data, (uint64, uint256, uint64, uint64, bytes, uint64));
         if (methodNum == 4158972569 && target == 10000) {
             return abi.encode(0, 0x51, hex"82824300904E83404000F6");

@@ -28,6 +28,13 @@ contract BeaconProxyFactory is UpgradeableBeacon {
      */
     event ProxyCreated(address indexed proxy);
 
+    /**
+     * @notice Constructor for BeaconProxyFactory
+     * @dev Initializes the underlying UpgradeableBeacon with the given implementation
+     *      and assigns the initial owner who can perform upgrades
+     * @param initialOwner The address to be set as the owner of the beacon (has upgrade permissions)
+     * @param implementation_ The address of the initial implementation contract for the beacon
+     */
     constructor(address initialOwner, address implementation_) UpgradeableBeacon(implementation_, initialOwner) {}
 
     /**
