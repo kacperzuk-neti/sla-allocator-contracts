@@ -5,6 +5,10 @@
     "stateMutability": "nonpayable"
   },
   {
+    "type": "receive",
+    "stateMutability": "payable"
+  },
+  {
     "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
     "inputs": [],
@@ -42,6 +46,41 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "changeBeneficiary",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "newBeneficiary",
+        "type": "tuple",
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      },
+      {
+        "name": "newQuota",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newExpirationChainEpoch",
+        "type": "int64",
+        "internalType": "int64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -386,6 +425,44 @@
   },
   {
     "type": "event",
+    "name": "BeneficiaryProposalSigned",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "newBeneficiary",
+        "type": "tuple",
+        "indexed": true,
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      },
+      {
+        "name": "newQuota",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newExpirationChainEpoch",
+        "type": "int64",
+        "indexed": false,
+        "internalType": "int64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -539,7 +616,13 @@
   {
     "type": "error",
     "name": "ExitCodeError",
-    "inputs": []
+    "inputs": [
+      {
+        "name": "exitCode",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ]
   },
   {
     "type": "error",
