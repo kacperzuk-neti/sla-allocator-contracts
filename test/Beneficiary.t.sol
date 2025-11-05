@@ -172,12 +172,12 @@ contract BeneficiaryTest is Test {
 
     function testGetBeneficiaryForSP1() public view {
         MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP1);
-        assertEq(result.active.beneficiary.data, hex"00904E");
+        assertEq(result.active.beneficiary.data, hex"00c2a101");
     }
 
     function testGetBeneficiaryForSP2() public view {
         MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP2);
-        assertEq(result.active.beneficiary.data, hex"00B8C101");
+        assertEq(result.active.beneficiary.data, hex"00c2a101");
     }
 
     function testGetBeneficiaryForSP3() public view {

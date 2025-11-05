@@ -20,6 +20,7 @@ contract SLAAllocatorTest is Test {
     CommonTypes.FilActorId SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
     CommonTypes.FilActorId SP4 = CommonTypes.FilActorId.wrap(uint64(40000));
     CommonTypes.FilActorId SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
+    CommonTypes.FilActorId SP6 = CommonTypes.FilActorId.wrap(uint64(60000));
     CommonTypes.FilActorId client = CommonTypes.FilActorId.wrap(uint64(11111));
 
     function setUp() public {
@@ -73,5 +74,10 @@ contract SLAAllocatorTest is Test {
     function testGetBeneficiaryExpectRevertExitCodeError() public {
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExitCodeError.selector));
         slaAllocator.grantDataCap(client, CommonTypes.FilActorId.wrap(uint64(12345)), 1);
+    }
+
+    function testGrantDataCapQuotaNotUnlimitedRevert() public {
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaNotUnlimited.selector));
+        slaAllocator.grantDataCap(client, SP6, 1);
     }
 }
