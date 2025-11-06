@@ -279,3 +279,4 @@ Beneficiary->>Miner: Accept Change Beneficiary Proposal
 9. Should we verify that beneficiary address is configured correctly when withdrawing rewards from **Beneficiary**?
 10. Who should handle changeBeneficiary process in **Beneficiary**? For now lets leave it to admin (a.k.a. slaAllocator governance team probably)
 11. Standardize on either `address` or `FilActorId` - which one?
+12. Miner rewards are released even 180 days after deal ends - do we handle it in any special way?
