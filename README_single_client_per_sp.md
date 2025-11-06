@@ -225,7 +225,7 @@ note over Client,DataCap: Tx 5: Withdraw funds
   SP->>Beneficiary: Request withdrawal
   activate Beneficiary
   
-  Beneficiary->>SLAAllocator: Fetch SP clients
+  Beneficiary->>SLAAllocator: Fetch SP's client address
   Beneficiary->>SLAAllocator: Get SLA contract for client/provider pair
   Beneficiary->>SLARegistry: Compute SLA Score
   activate SLARegistry
