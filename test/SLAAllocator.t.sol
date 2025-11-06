@@ -23,6 +23,7 @@ import {MockSLARegistry} from "./contracts/MockSLARegistry.sol";
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
     MockSLARegistry public slaRegistry;
+    Client public clientSmartContract;
     SLAAllocator.SLA[] public slas;
     ActorIdMock public actorIdMock;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
@@ -34,20 +35,23 @@ contract SLAAllocatorTest is Test {
     CommonTypes.FilActorId public SP4 = CommonTypes.FilActorId.wrap(uint64(40000));
     CommonTypes.FilActorId public SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
     CommonTypes.FilActorId public SP6 = CommonTypes.FilActorId.wrap(uint64(60000));
-    CommonTypes.FilActorId public client = CommonTypes.FilActorId.wrap(uint64(11111));
-    // solhint-enable var-name-mixedcase
+
+    address public admin = vm.addr(1);
+    address public manager = vm.addr(2);
+    BeneficiaryFactory public beneficiaryFactory;
+    address public unauthorized = vm.addr(5);
 
     function setUp() public {
         actorIdMock = new ActorIdMock();
         address actorIdProxy = address(new MockProxy(address(5555)));
         vm.etch(CALL_ACTOR_ID, address(actorIdMock).code);
         vm.etch(address(5555), address(actorIdProxy).code);
-        BeneficiaryFactory beneficiaryFactory = new BeneficiaryFactory();
-        Client clientSmartContract = Client(address(new MockClient()));
+        beneficiaryFactory = new BeneficiaryFactory();
+        clientSmartContract = Client(address(new MockClient()));
         slaRegistry = new MockSLARegistry();
 
         SLAAllocator impl = new SLAAllocator();
-        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (address(this)));
+        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (admin, manager));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         slaAllocator = SLAAllocator(address(proxy));
         slaAllocator.initialize2(clientSmartContract, beneficiaryFactory);
@@ -57,18 +61,15 @@ contract SLAAllocatorTest is Test {
 
     function testIsAdminSet() public view {
         bytes32 adminRole = slaAllocator.DEFAULT_ADMIN_ROLE();
-        assertTrue(slaAllocator.hasRole(adminRole, address(this)));
+        assertTrue(slaAllocator.hasRole(adminRole, admin));
     }
 
     function testAuthorizeUpgradeRevert() public {
         address newImpl = address(new SLAAllocator());
-        address unauthorized = vm.addr(1);
         bytes32 upgraderRole = slaAllocator.UPGRADER_ROLE();
         // solhint-disable-next-line gas-small-strings
         bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
-
-        vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
+        vm.expectRevert(abi.encodeWithSelector(sel, address(this), upgraderRole));
         slaAllocator.upgradeToAndCall(newImpl, "");
     }
 
@@ -124,9 +125,48 @@ contract SLAAllocatorTest is Test {
 
     function testCantBeReinitialized() public {
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
-        slaAllocator.initialize(address(2));
+        slaAllocator.initialize(address(2), address(2));
 
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
         slaAllocator.initialize2(Client(address(2)), BeneficiaryFactory(address(1)));
+    }
+
+    function testDecreaseAllowanceRevertUnathorized() public {
+        bytes32 managerRole = slaAllocator.MANAGER_ROLE();
+        // solhint-disable-next-line gas-small-strings
+        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(sel, address(this), managerRole));
+        slaAllocator.mintDataCap(1000);
+    }
+
+    function testMintDataCap() public {
+        vm.prank(manager);
+        slaAllocator.mintDataCap(1000);
+    }
+
+    function testMintDataCapEmitEvent() public {
+        vm.prank(manager);
+        vm.expectEmit(true, true, true, true);
+        emit SLAAllocator.DatacapAllocated(manager, clientSmartContract, 1000);
+        slaAllocator.mintDataCap(1000);
+    }
+
+    function testDecreaseAllowanceRevertAmountEqualZero() public {
+        vm.prank(manager);
+        vm.expectRevert(SLAAllocator.AmountEqualZero.selector);
+        slaAllocator.mintDataCap(0);
+    }
+
+    function testIsManagerSet() public view {
+        bytes32 managerRole = slaAllocator.MANAGER_ROLE();
+        assertTrue(slaAllocator.hasRole(managerRole, manager));
+    }
+
+    function testIsBeneficiaryFactorySet() public view {
+        assertEq(address(slaAllocator.beneficiaryFactory()), address(beneficiaryFactory));
+    }
+
+    function testIsClientSmartContractSet() public view {
+        assertEq(address(slaAllocator.clientSmartContract()), address(clientSmartContract));
     }
 }

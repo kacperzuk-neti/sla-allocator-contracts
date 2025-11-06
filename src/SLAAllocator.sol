@@ -4,7 +4,12 @@ pragma solidity ^0.8.24;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
+import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
+import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
+import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
+
 import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 import {Client} from "./Client.sol";
@@ -35,9 +40,32 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Upgradable role which allows for contract upgrades
      */
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    /**
+     * @notice Manager role which allows to manage datacap
+     */
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
+    // solhint-disable gas-indexed-events
+    /**
+     * @notice Emitted when datacap is granted to a client
+     * @param allocator Allocator who granted the datacap
+     * @param client Client that received datacap (Filecoin address)
+     * @param amount Amount of datacap
+     */
+    event DatacapAllocated(address indexed allocator, Client indexed client, uint256 amount);
 
     /**
-     * @notice Address of the registry of beneficiary contracts
+     * @dev Thrown if trying to add 0 allowance or grant 0 datacap
+     */
+    error AmountEqualZero();
+
+    // /**
+    //  * @dev Thrown if VerifRegAPI call returns non-zero exit code
+    //  */
+    error ExitCodeError(int256);
+
+    /**
+     * @notice Address of the factory of beneficiary contracts
      */
     BeneficiaryFactory public beneficiaryFactory;
 
@@ -87,14 +115,16 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     /**
-     * @notice Contract initializator. Should be called during deployment
-     * @param admin Contract owner
+     * @notice Contract initializer. Should be called during deployment to configure roles and addresses.
+     * @param admin Contract owner (granted DEFAULT_ADMIN_ROLE and UPGRADER_ROLE)
+     * @param manager Manager address (granted MANAGER_ROLE)
      */
-    function initialize(address admin) external initializer {
+    function initialize(address admin, address manager) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+        _grantRole(MANAGER_ROLE, manager);
     }
 
     /**
@@ -152,5 +182,26 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param newImplementation Address of new implementation
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+
     // solhint-enable no-empty-blocks
+
+    /**
+     * @notice Grant allowance to a client.
+     * @param amount Amount of datacap to grant
+     * @dev Emits DatacapAllocated event
+     * @dev Reverts with InsufficientAllowance if caller doesn't have sufficient allowance
+     * @custom:oz-upgrades-unsafe-allow-reachable delegatecall
+     */
+    function mintDataCap(uint256 amount) external onlyRole(MANAGER_ROLE) {
+        if (amount == 0) revert AmountEqualZero();
+        VerifRegTypes.AddVerifiedClientParams memory params = VerifRegTypes.AddVerifiedClientParams({
+            addr: FilAddresses.fromEthAddress(address(clientSmartContract)),
+            allowance: CommonTypes.BigInt(abi.encodePacked(amount), false)
+        });
+        emit DatacapAllocated(msg.sender, clientSmartContract, amount);
+        int256 exitCode = VerifRegAPI.addVerifiedClient(params);
+        if (exitCode != 0) {
+            revert ExitCodeError(exitCode);
+        }
+    }
 }

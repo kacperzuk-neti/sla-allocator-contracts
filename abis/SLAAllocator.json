@@ -19,6 +19,19 @@
   },
   {
     "type": "function",
+    "name": "MANAGER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
@@ -138,6 +151,11 @@
         "name": "admin",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "manager",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -156,6 +174,19 @@
         "name": "beneficiaryFactory_",
         "type": "address",
         "internalType": "contract BeneficiaryFactory"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "mintDataCap",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -366,6 +397,31 @@
   },
   {
     "type": "event",
+    "name": "DatacapAllocated",
+    "inputs": [
+      {
+        "name": "allocator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "contract Client"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -523,6 +579,11 @@
   },
   {
     "type": "error",
+    "name": "AmountEqualZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BeneficiaryFactoryAlreadySet",
     "inputs": []
   },
@@ -541,6 +602,17 @@
     "type": "error",
     "name": "ERC1967NonPayable",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ExitCodeError",
+    "inputs": [
+      {
+        "name": "",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ]
   },
   {
     "type": "error",
