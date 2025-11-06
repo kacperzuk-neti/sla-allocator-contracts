@@ -148,6 +148,7 @@ address burnAddress;
 
 ```
 interface SLARegistryInterface {
+    // must revert if there's no agreement registered for given client/provider pair
     function score(address client, address provider) external;
 }
 ```
@@ -228,6 +229,10 @@ note over Client,DataCap: Tx 4: Start mining
 note over Client,DataCap: Tx 5: Withdraw funds
   SP->>Beneficiary: Request withdrawal
   activate Beneficiary
+  Beneficiary->>Miner: Withdraw mining rewards from Miner Actor
+  activate Miner
+  Miner-->>Beneficiary: Transfer funds
+  deactivate Miner
   
   Beneficiary->>ClientSC: Fetch SP's clients & weights
   loop Repeat for all clients
@@ -279,3 +284,4 @@ Beneficiary->>Miner: Accept Change Beneficiary Proposal
 9. Should we verify that beneficiary address is configured correctly when withdrawing rewards from **Beneficiary**?
 10. Who should handle changeBeneficiary process in **Beneficiary**? For now lets leave it to admin (a.k.a. slaAllocator governance team probably)
 11. Standardize on either `address` or `FilActorId` - which one?
+12. Miner rewards are released even 180 days after deal ends - do we handle it in any special way?
