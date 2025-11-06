@@ -62,8 +62,8 @@
     "inputs": [
       {
         "name": "provider",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "outputs": [
@@ -258,8 +258,8 @@
     "inputs": [
       {
         "name": "provider",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       },
       {
         "name": "slis",
@@ -438,9 +438,9 @@
     "inputs": [
       {
         "name": "provider",
-        "type": "address",
+        "type": "uint64",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "CommonTypes.FilActorId"
       },
       {
         "name": "slis",

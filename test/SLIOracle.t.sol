@@ -3,8 +3,9 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "lib/forge-std/src/Test.sol";
-import {SLIOracle} from "../src/SLIOracle.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
+import {SLIOracle} from "../src/SLIOracle.sol";
 
 contract SLIOracleTest is Test {
     SLIOracle public sliOracle;
@@ -40,7 +41,7 @@ contract SLIOracleTest is Test {
     }
 
     function testSLIAttestationEvent() public {
-        address provider = address(0x123);
+        CommonTypes.FilActorId provider = CommonTypes.FilActorId.wrap(123);
         SLIOracle.SLIAttestation memory slis = SLIOracle.SLIAttestation({
             lastUpdate: block.number, availability: 1, latency: 1, indexing: 1, retention: 1, bandwidth: 1, stability: 1
         });

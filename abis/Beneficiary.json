@@ -153,14 +153,19 @@
         "internalType": "address"
       },
       {
-        "name": "_provider",
+        "name": "manager",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_slaRegistry",
+        "name": "provider_",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "slaAllocator_",
         "type": "address",
-        "internalType": "address"
+        "internalType": "contract SLAAllocator"
       }
     ],
     "outputs": [],
@@ -173,8 +178,8 @@
     "outputs": [
       {
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "stateMutability": "view"
@@ -220,7 +225,7 @@
     "name": "setSlashRecipient",
     "inputs": [
       {
-        "name": "_slashRecipient",
+        "name": "slashRecipient_",
         "type": "address",
         "internalType": "address"
       }
@@ -230,13 +235,13 @@
   },
   {
     "type": "function",
-    "name": "slaRegistry",
+    "name": "slaAllocator",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract SLARegistry"
+        "internalType": "contract SLAAllocator"
       }
     ],
     "stateMutability": "view"
@@ -278,7 +283,7 @@
     "name": "withdraw",
     "inputs": [
       {
-        "name": "_to",
+        "name": "to",
         "type": "address",
         "internalType": "address payable"
       }

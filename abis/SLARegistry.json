@@ -112,10 +112,28 @@
         "name": "admin",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "oracle_",
+        "type": "address",
+        "internalType": "contract SLIOracle"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "oracle",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract SLIOracle"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -141,8 +159,8 @@
       },
       {
         "name": "provider",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       },
       {
         "name": "slaParams",
@@ -231,9 +249,14 @@
     "name": "score",
     "inputs": [
       {
-        "name": "provider",
+        "name": "client",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "outputs": [
@@ -243,7 +266,7 @@
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -256,8 +279,8 @@
       },
       {
         "name": "provider",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "outputs": [
@@ -436,9 +459,9 @@
       },
       {
         "name": "provider",
-        "type": "address",
+        "type": "uint64",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "anonymous": false
@@ -530,8 +553,24 @@
       },
       {
         "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SLAUnknown",
+    "inputs": [
+      {
+        "name": "client",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ]
   },
