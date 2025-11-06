@@ -1,0 +1,27 @@
+[
+  {
+    "type": "error",
+    "name": "ExitCodeError",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ExpirationBelowFiveYears",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoBeneficiarySet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaCannotBeNegative",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaNotUnlimited",
+    "inputs": []
+  }
+]
