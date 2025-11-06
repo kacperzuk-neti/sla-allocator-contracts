@@ -283,9 +283,16 @@
     "name": "withdraw",
     "inputs": [
       {
-        "name": "to",
-        "type": "address",
-        "internalType": "address payable"
+        "name": "recipient",
+        "type": "tuple",
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -435,10 +442,17 @@
     "name": "Withdrawn",
     "inputs": [
       {
-        "name": "to",
-        "type": "address",
+        "name": "recipient",
+        "type": "tuple",
         "indexed": true,
-        "internalType": "address"
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
       },
       {
         "name": "amountToSP",
@@ -505,6 +519,17 @@
         "name": "actorId",
         "type": "uint64",
         "internalType": "CommonTypes.FilActorId"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAddress",
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ]
   },

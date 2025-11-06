@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.25;
 
-contract BuiltinActorsMock {
+contract ActorIdMock {
     error MethodNotFound();
 
     receive() external payable {}
@@ -52,6 +52,7 @@ contract BuiltinActorsMock {
         if (methodNum == 1570634796 && target == 20000) {
             return abi.encode(0, 0x00, "");
         }
+
         revert MethodNotFound();
     }
 }

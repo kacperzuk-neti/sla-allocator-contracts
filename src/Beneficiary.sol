@@ -9,6 +9,7 @@ import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
+import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
 
 /**
  * @title Beneficiary
@@ -51,11 +52,11 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     // solhint-disable gas-indexed-events
     /**
      * @notice Emits a Withdrawn event.
-     * @param to The address to withdraw the balance to.
+     * @param recipient The FilAddress to withdraw the balance to.
      * @param amountToSP The amount to send to the storage provider.
      * @param amountToRedirected The amount to send to the redirected address.
      */
-    event Withdrawn(address indexed to, uint256 amountToSP, uint256 amountToRedirected);
+    event Withdrawn(CommonTypes.FilAddress indexed recipient, uint256 amountToSP, uint256 amountToRedirected);
     // solhint-enable gas-indexed-events
 
     /**
@@ -124,18 +125,20 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     /**
      * @notice Withdraws the balance of the contract to the specified address. Emits a Withdrawn event.
      * @dev The balance is split between the storage provider and the redirected address based on the score. but for now its always 100% to SP
-     * @param to The address to withdraw the balance to.
+     *      Reverts with WithdrawalFailed if the SendAPI.send method returns a non-zero exit code.
+     * @param recipient The FilAddress to withdraw the balance to.
      */
-    function withdraw(address payable to) public onlyRole(WITHDRAWER_ROLE) {
+    function withdraw(CommonTypes.FilAddress memory recipient) public onlyRole(WITHDRAWER_ROLE) {
         uint256 amount = address(this).balance;
         address client = slaAllocator.providerClients(provider);
         SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(client, provider));
         uint256 score = slaRegistry.score(client, provider);
         (uint256 amountToSP, uint256 amountToBeRedirected) = _slashByScore(amount, score);
 
-        emit Withdrawn(to, amountToSP, amountToBeRedirected);
-        (bool sent,) = to.call{value: amount}("");
-        if (!sent) {
+        emit Withdrawn(recipient, amountToSP, amountToBeRedirected);
+        // solhint-disable-next-line check-send-result
+        int256 exitCode = SendAPI.send(recipient, amount);
+        if (exitCode != 0) {
             revert WithdrawalFailed();
         }
     }
