@@ -19,19 +19,6 @@
   },
   {
     "type": "function",
-    "name": "ORACLE_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
@@ -52,55 +39,6 @@
         "name": "",
         "type": "string",
         "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "attestations",
-    "inputs": [
-      {
-        "name": "provider",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "lastUpdate",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "availability",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "latency",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "indexing",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "retention",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "bandwidth",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "stability",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -174,33 +112,9 @@
         "name": "admin",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "oracle",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "multicall",
-    "inputs": [
-      {
-        "name": "data",
-        "type": "bytes[]",
-        "internalType": "bytes[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "results",
-        "type": "bytes[]",
-        "internalType": "bytes[]"
-      }
-    ],
     "stateMutability": "nonpayable"
   },
   {
@@ -215,6 +129,66 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "registerSLA",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "slaParams",
+        "type": "tuple",
+        "internalType": "struct SLARegistry.SLAParams",
+        "components": [
+          {
+            "name": "availability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "latency",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "indexing",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "retention",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "bandwidth",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "stability",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "registered",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -254,58 +228,76 @@
   },
   {
     "type": "function",
-    "name": "setSLI",
+    "name": "score",
     "inputs": [
       {
         "name": "provider",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "slis",
-        "type": "tuple",
-        "internalType": "struct SLIOracle.SLIAttestation",
-        "components": [
-          {
-            "name": "lastUpdate",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "availability",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "latency",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "indexing",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "retention",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "bandwidth",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "stability",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "sla",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "availability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "latency",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "indexing",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "retention",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "bandwidth",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "stability",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "registered",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -434,56 +426,19 @@
   },
   {
     "type": "event",
-    "name": "SLIAttestationUpdate",
+    "name": "SLARegistered",
     "inputs": [
       {
-        "name": "provider",
+        "name": "client",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "slis",
-        "type": "tuple",
+        "name": "provider",
+        "type": "address",
         "indexed": true,
-        "internalType": "struct SLIOracle.SLIAttestation",
-        "components": [
-          {
-            "name": "lastUpdate",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "availability",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "latency",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "indexing",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "retention",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "bandwidth",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "stability",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -563,6 +518,22 @@
     "type": "error",
     "name": "NotInitializing",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SLAAlreadyRegistered",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
