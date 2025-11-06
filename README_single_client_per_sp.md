@@ -143,6 +143,7 @@ address burnAddress;
 
 ```
 interface SLARegistryInterface {
+    // must revert if there's no agreement registered for given client/provider pair
     function score(address client, address provider) external;
 }
 ```
