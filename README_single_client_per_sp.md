@@ -219,11 +219,14 @@ note over Client,DataCap: Tx 3: Make DDO Allocation
 
 note over Client,DataCap: Tx 4: Start mining
   SP->>Miner: Claim DC allocations & start mining
-  Miner->>Beneficiary: Transfer mining rewards
-  
-note over Client,DataCap: Tx 5: Withdraw funds
+
+note over Client,DataCap: Tx 5: Withdraw funds from Beneficiary
   SP->>Beneficiary: Request withdrawal
   activate Beneficiary
+  Beneficiary->>Miner: Withdraw mining rewards from Miner Actor
+  activate Miner
+  Miner->>Beneficiary: Transfer funds
+  deactivate Miner
   
   Beneficiary->>SLAAllocator: Fetch SP's client address
   Beneficiary->>SLAAllocator: Get SLA contract for client/provider pair
