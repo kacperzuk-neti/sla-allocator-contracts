@@ -6,14 +6,20 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {SLAAllocator} from "../src/SLAAllocator.sol";
-import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
+import {SLARegistry} from "../src/SLAAllocator.sol";
 import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
+import {Client} from "../src/Client.sol";
+import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
 import {BuiltinActorsMock} from "./contracts/BuiltinActorsMock.sol";
 import {MockProxy} from "./contracts/MockProxy.sol";
+import {MockClient} from "./contracts/MockClient.sol";
+import {MockSLARegistry} from "./contracts/MockSLARegistry.sol";
 
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
+    MockSLARegistry public slaRegistry;
     BuiltinActorsMock public builtinActorsMock;
+    SLAAllocator.SLA[] public slas;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     // solhint-disable var-name-mixedcase
@@ -32,11 +38,15 @@ contract SLAAllocatorTest is Test {
         vm.etch(CALL_ACTOR_ID, address(mockProxy).code);
         vm.etch(address(5555), address(builtinActorsMock).code);
         BeneficiaryFactory beneficiaryFactory = new BeneficiaryFactory();
+        Client clientSmartContract = Client(address(new MockClient()));
+        slaRegistry = new MockSLARegistry();
 
         SLAAllocator impl = new SLAAllocator();
-        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (address(this), beneficiaryFactory));
+        bytes memory initData =
+            abi.encodeCall(SLAAllocator.initialize, (address(this), clientSmartContract, beneficiaryFactory));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         slaAllocator = SLAAllocator(address(proxy));
+        slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
     }
 
     function testIsAdminSet() public view {
@@ -56,32 +66,53 @@ contract SLAAllocatorTest is Test {
         slaAllocator.upgradeToAndCall(newImpl, "");
     }
 
-    function testGrantDataCapExpirationBelowFiveYearsRevert() public {
+    function testRequestDataCapExpirationBelowFiveYearsRevert() public {
+        slas[0].provider = SP1;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExpirationBelowFiveYears.selector));
-        slaAllocator.grantDataCap(client, SP1, 1);
+        slaAllocator.requestDataCap(slas, 1);
     }
 
-    function testGrantDataCapNoBeneficiarySetRevert() public {
+    function testRequestDataCapNoBeneficiarySetRevert() public {
+        slas[0].provider = SP4;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.NoBeneficiarySet.selector));
-        slaAllocator.grantDataCap(client, SP4, 1);
+        slaAllocator.requestDataCap(slas, 1);
     }
 
-    function testGrantDataCapQuotaCannotBeNegativeRevert() public {
+    function testRequestDataCapQuotaCannotBeNegativeRevert() public {
+        slas[0].provider = SP5;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaCannotBeNegative.selector));
-        slaAllocator.grantDataCap(client, SP5, 1);
+        slaAllocator.requestDataCap(slas, 1);
     }
 
-    function testGrantDataCapSucceed() public view {
-        slaAllocator.grantDataCap(client, SP2, 1);
+    function testRequestDataCapSucceed() public {
+        slas[0].provider = SP2;
+        slaAllocator.requestDataCap(slas, 1);
     }
 
     function testGetBeneficiaryExpectRevertExitCodeError() public {
+        slas[0].provider = CommonTypes.FilActorId.wrap(uint64(12345));
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExitCodeError.selector));
-        slaAllocator.grantDataCap(client, CommonTypes.FilActorId.wrap(uint64(12345)), 1);
+        slaAllocator.requestDataCap(slas, 1);
     }
 
-    function testGrantDataCapQuotaNotUnlimitedRevert() public {
+    function testRequestDataCapQuotaNotUnlimitedRevert() public {
+        slas[0].provider = SP6;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaNotUnlimited.selector));
-        slaAllocator.grantDataCap(client, SP6, 1);
+        slaAllocator.requestDataCap(slas, 1);
+    }
+
+    function testRequestDataCapSingleClientPerSP() public {
+        slas[0].provider = SP2;
+        slaAllocator.requestDataCap(slas, 1);
+
+        vm.prank(vm.addr(5));
+        vm.expectRevert(abi.encodeWithSelector(SLAAllocator.ProviderBoundToDifferentClient.selector));
+        slaAllocator.requestDataCap(slas, 1);
+    }
+
+    function testRequestDataCapSameClientPerSPTwice() public {
+        slas[0].provider = SP2;
+        slaAllocator.requestDataCap(slas, 1);
+        slaAllocator.requestDataCap(slas, 1);
     }
 }

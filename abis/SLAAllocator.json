@@ -45,13 +45,26 @@
   },
   {
     "type": "function",
-    "name": "beneficiaryRegistry",
+    "name": "beneficiaryFactory",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "contract BeneficiaryFactory"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "clientSmartContract",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract Client"
       }
     ],
     "stateMutability": "view"
@@ -73,29 +86,6 @@
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "grantDataCap",
-    "inputs": [
-      {
-        "name": "clientId",
-        "type": "uint64",
-        "internalType": "CommonTypes.FilActorId"
-      },
-      {
-        "name": "providerId",
-        "type": "uint64",
-        "internalType": "CommonTypes.FilActorId"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
     "stateMutability": "view"
   },
   {
@@ -150,7 +140,12 @@
         "internalType": "address"
       },
       {
-        "name": "beneficiaryRegistry_",
+        "name": "clientSmartContract_",
+        "type": "address",
+        "internalType": "contract Client"
+      },
+      {
+        "name": "beneficiaryFactory_",
         "type": "address",
         "internalType": "contract BeneficiaryFactory"
       }
@@ -173,6 +168,25 @@
         "name": "client",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "providers",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "stateMutability": "view"
@@ -203,6 +217,36 @@
         "name": "callerConfirmation",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "requestDataCap",
+    "inputs": [
+      {
+        "name": "slas",
+        "type": "tuple[]",
+        "internalType": "struct SLAAllocator.SLA[]",
+        "components": [
+          {
+            "name": "registry",
+            "type": "address",
+            "internalType": "contract SLARegistry"
+          },
+          {
+            "name": "provider",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          }
+        ]
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -243,9 +287,9 @@
     ],
     "outputs": [
       {
-        "name": "slaContract",
+        "name": "contractAddress",
         "type": "address",
-        "internalType": "address"
+        "internalType": "contract SLARegistry"
       }
     ],
     "stateMutability": "view"
@@ -286,6 +330,31 @@
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "event",
+    "name": "DataCapGranted",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -371,6 +440,25 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SLARegistered",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "anonymous": false
@@ -526,12 +614,22 @@
   },
   {
     "type": "error",
+    "name": "ProviderBoundToDifferentClient",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "QuotaCannotBeNegative",
     "inputs": []
   },
   {
     "type": "error",
     "name": "QuotaNotUnlimited",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SLANotRegistered",
     "inputs": []
   },
   {
