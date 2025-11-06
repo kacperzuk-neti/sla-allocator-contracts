@@ -37,7 +37,7 @@ contract BeaconProxyFactoryTest is Test {
         vm.expectEmit(true, true, true, true);
 
         address expectedProxy = computeProxyAddress(manager, factory.nonce(manager) + 1);
-        emit BeaconProxyFactory.ProxyCreated(expectedProxy);
+        emit BeaconProxyFactory.ProxyCreated(expectedProxy, provider);
 
         factory.create(manager, provider, slaRegistry);
     }
@@ -46,14 +46,19 @@ contract BeaconProxyFactoryTest is Test {
         address expectedProxy = computeProxyAddress(manager, factory.nonce(manager) + 1);
         factory.create(manager, provider, slaRegistry);
 
-        assertTrue(factory.proxyDeployed(expectedProxy));
+        assertTrue(factory.instances(provider) == expectedProxy);
     }
 
     function testDeployIncrementsNonce() public {
         factory.create(manager, provider, slaRegistry);
         assertEq(factory.nonce(manager), 1);
+    }
+
+    function testDeployRevertsIfInstanceExists() public {
         factory.create(manager, provider, slaRegistry);
-        assertEq(factory.nonce(manager), 2);
+
+        vm.expectRevert(abi.encodeWithSelector(BeaconProxyFactory.InstanceAlreadyExists.selector));
+        factory.create(manager, provider, slaRegistry);
     }
 
     function computeProxyAddress(address manager_, uint256 nonce_) private view returns (address) {
