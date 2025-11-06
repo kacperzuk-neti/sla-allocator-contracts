@@ -55,7 +55,7 @@ interface SLAAllocator {
 
 Expected storage items:
 ```
-mapping(FilActorId[] provider => address client) providerClients; // temporary
+mapping(FilActorId provider => address client) providerClients; // temporary
 FilActorId[] providers; // temporary, for Oracle Service to know which providers to track
 address beneficiaryRegistry;
 address clientSmartContract;
