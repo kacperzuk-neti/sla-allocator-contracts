@@ -225,7 +225,7 @@ note over Client,DataCap: Tx 5: Withdraw funds from Beneficiary
   activate Beneficiary
   Beneficiary->>Miner: Withdraw mining rewards from Miner Actor
   activate Miner
-  Miner->>Beneficiary: Transfer funds
+  Miner-->>Beneficiary: Transfer funds
   deactivate Miner
   
   Beneficiary->>SLAAllocator: Fetch SP's client address
