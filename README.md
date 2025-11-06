@@ -148,6 +148,7 @@ address burnAddress;
 
 ```
 interface SLARegistryInterface {
+    // must revert if there's no agreement registered for given client/provider pair
     function score(address client, address provider) external;
 }
 ```
@@ -228,6 +229,10 @@ note over Client,DataCap: Tx 4: Start mining
 note over Client,DataCap: Tx 5: Withdraw funds
   SP->>Beneficiary: Request withdrawal
   activate Beneficiary
+  Beneficiary->>Miner: Withdraw mining rewards from Miner Actor
+  activate Miner
+  Miner-->>Beneficiary: Transfer funds
+  deactivate Miner
   
   Beneficiary->>ClientSC: Fetch SP's clients & weights
   loop Repeat for all clients
