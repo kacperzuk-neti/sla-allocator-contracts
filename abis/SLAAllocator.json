@@ -138,7 +138,15 @@
         "name": "admin",
         "type": "address",
         "internalType": "address"
-      },
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initialize2",
+    "inputs": [
       {
         "name": "clientSmartContract_",
         "type": "address",
@@ -512,6 +520,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "BeneficiaryFactoryAlreadySet",
+    "inputs": []
   },
   {
     "type": "error",

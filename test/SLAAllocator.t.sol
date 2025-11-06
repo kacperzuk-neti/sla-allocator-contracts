@@ -2,6 +2,7 @@
 // solhint-disable use-natspec
 pragma solidity ^0.8.24;
 
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
@@ -42,10 +43,11 @@ contract SLAAllocatorTest is Test {
         slaRegistry = new MockSLARegistry();
 
         SLAAllocator impl = new SLAAllocator();
-        bytes memory initData =
-            abi.encodeCall(SLAAllocator.initialize, (address(this), clientSmartContract, beneficiaryFactory));
+        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (address(this)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         slaAllocator = SLAAllocator(address(proxy));
+        slaAllocator.initialize2(clientSmartContract, beneficiaryFactory);
+
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
     }
 
@@ -114,5 +116,13 @@ contract SLAAllocatorTest is Test {
         slas[0].provider = SP2;
         slaAllocator.requestDataCap(slas, 1);
         slaAllocator.requestDataCap(slas, 1);
+    }
+
+    function testCantBeReinitialized() public {
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
+        slaAllocator.initialize(address(2));
+
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
+        slaAllocator.initialize2(Client(address(2)), BeneficiaryFactory(address(1)));
     }
 }
