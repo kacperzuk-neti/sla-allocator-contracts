@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
+import {SLIOracle} from "./SLIOracle.sol";
 
 /**
  * @title SLA Registry
@@ -20,21 +22,33 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @dev The key is a tuple of client and provider addresses
      * @dev The value is a struct containing the SLA parameters
      */
-    mapping(address client => mapping(address provider => SLAParams)) public sla;
+    mapping(address client => mapping(CommonTypes.FilActorId provider => SLAParams)) public sla;
+
+    /**
+     * @notice SLIOracle instance
+     */
+    SLIOracle public oracle;
 
     /**
      * @notice Event emitted when a new SLA is registered for a given client and provider
      * @param client The client address
-     * @param provider The provider address
+     * @param provider The provider ID
      */
-    event SLARegistered(address indexed client, address indexed provider);
+    event SLARegistered(address indexed client, CommonTypes.FilActorId indexed provider);
 
     /**
      * @notice Error emitted when a SLA is already registered for a given client and provider
      * @param client The client address
-     * @param provider The provider address
+     * @param provider The provider ID
      */
-    error SLAAlreadyRegistered(address client, address provider);
+    error SLAAlreadyRegistered(address client, CommonTypes.FilActorId provider);
+
+    /**
+     * @notice Error emitted when trying to get a score for unregistered SLA
+     * @param client The client address
+     * @param provider The provider ID
+     */
+    error SLAUnknown(address client, CommonTypes.FilActorId provider);
 
     /**
      * @notice Struct containing the SLA deal parameters
@@ -59,12 +73,14 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
     /**
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
+     * @param oracle_ SLIOracle
      */
-    function initialize(address admin) public initializer {
+    function initialize(address admin, SLIOracle oracle_) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+        oracle = oracle_;
     }
 
     /**
@@ -73,7 +89,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param provider The provider address
      * @param slaParams The SLA deal parameters
      */
-    function registerSLA(address client, address provider, SLAParams memory slaParams) public {
+    function registerSLA(address client, CommonTypes.FilActorId provider, SLAParams memory slaParams) public {
         _checkSLARegistered(client, provider);
         slaParams.registered = true;
         sla[client][provider] = slaParams;
@@ -86,7 +102,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param provider The provider address
      * @dev Will revert if a SLA is already registered for the given client and provider
      */
-    function _checkSLARegistered(address client, address provider) private view {
+    function _checkSLARegistered(address client, CommonTypes.FilActorId provider) private view {
         if (sla[client][provider].registered) {
             revert SLAAlreadyRegistered(client, provider);
         }
@@ -106,15 +122,27 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @notice Retrieves the score for a given provider.
      * @dev Returns the mocked score for a given provider.
      * @param provider The address of the provider.
-     * @return The mocked score of the provider.
+     * @return The score of the provider.
      */
-    function score(address provider) public pure returns (uint256) {
-        if (provider == address(0x123)) {
-            return 75;
+    function score(address client, CommonTypes.FilActorId provider) public view returns (uint256) {
+        if (!sla[client][provider].registered) {
+            revert SLAUnknown(client, provider);
         }
-        if (provider == address(0x456)) {
-            return 35;
-        }
-        return 95;
+
+        (
+            uint256 lastUpdate,
+            /* uint16 availability */,
+            /* uint16 latency */,
+            /* uint16 indexing */,
+            /* uint16 retention */,
+            /* uint16 bandwidth */,
+            /* uint16 stability */
+        ) = oracle.attestations(provider);
+
+        if (lastUpdate == 0) return 0;
+
+        // FIXME
+
+        return 1;
     }
 }

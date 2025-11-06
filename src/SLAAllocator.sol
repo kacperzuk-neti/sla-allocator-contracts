@@ -6,6 +6,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
+import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 
 /**
  * @title SLA Allocator
@@ -19,6 +20,21 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
+     * @notice Address of the registry of beneficiary contracts
+     */
+    BeneficiaryFactory public beneficiaryRegistry;
+
+    /**
+     * @notice TEMPORARY! Each provider's client
+     */
+    mapping(CommonTypes.FilActorId provider => address client) public providerClients;
+
+    /**
+     * @notice Addresses of known SLA Contracts
+     */
+    mapping(address client => mapping(CommonTypes.FilActorId provider => address slaContract)) public slaContracts;
+
+    /**
      * @notice Disabled constructor (proxy pattern)
      */
     constructor() {
@@ -29,11 +45,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
      */
-    function initialize(address admin) public initializer {
+    function initialize(address admin, BeneficiaryFactory beneficiaryRegistry_) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+        beneficiaryRegistry = beneficiaryRegistry_;
     }
 
     // solhint-disable no-unused-vars

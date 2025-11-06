@@ -3,12 +3,13 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "lib/forge-std/src/Test.sol";
-import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {BuiltinActorsMock} from "../test/contracts/BuiltinActorsMock.sol";
-import {MockProxy} from "../test/contracts/MockProxy.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
+import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
+import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
+import {BuiltinActorsMock} from "./contracts/BuiltinActorsMock.sol";
+import {MockProxy} from "./contracts/MockProxy.sol";
 
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
@@ -30,9 +31,10 @@ contract SLAAllocatorTest is Test {
         address mockProxy = address(new MockProxy());
         vm.etch(CALL_ACTOR_ID, address(mockProxy).code);
         vm.etch(address(5555), address(builtinActorsMock).code);
+        BeneficiaryFactory beneficiaryFactory = new BeneficiaryFactory();
 
         SLAAllocator impl = new SLAAllocator();
-        bytes memory initData = abi.encodeWithSignature("initialize(address)", address(this));
+        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (address(this), beneficiaryFactory));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         slaAllocator = SLAAllocator(address(proxy));
     }

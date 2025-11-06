@@ -4,25 +4,27 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Beneficiary} from "../src/Beneficiary.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {BuiltinActorsMock} from "../test/contracts/BuiltinActorsMock.sol";
-import {MockProxy} from "../test/contracts/MockProxy.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
-import {SLARegistry} from "../src/SLARegistry.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {RevertingReceiver} from "../test/contracts/RevertingReceiver.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
+import {SLAAllocator} from "../src/SLAAllocator.sol";
+import {Beneficiary} from "../src/Beneficiary.sol";
 import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
+import {RevertingReceiver} from "./contracts/RevertingReceiver.sol";
+import {BuiltinActorsMock} from "./contracts/BuiltinActorsMock.sol";
+import {MockProxy} from "./contracts/MockProxy.sol";
+import {MockSLAAllocator} from "./contracts/MockSLAAllocator.sol";
 
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
     BuiltinActorsMock public builtinActorsMock;
 
-    address public provider = address(0x999);
-    address public slaRegistry;
+    CommonTypes.FilActorId public provider = CommonTypes.FilActorId.wrap(0x999);
+    SLAAllocator public slaAllocator;
+    address public manager = vm.addr(1);
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     // solhint-disable var-name-mixedcase
@@ -33,20 +35,24 @@ contract BeneficiaryTest is Test {
 
     function setUp() public {
         builtinActorsMock = new BuiltinActorsMock();
-        slaRegistry = address(new SLARegistry());
+        slaAllocator = SLAAllocator(address(new MockSLAAllocator()));
         address mockProxy = address(new MockProxy());
 
         vm.etch(CALL_ACTOR_ID, address(mockProxy).code);
         vm.etch(address(5555), address(builtinActorsMock).code);
 
-        beneficiary = setupBeneficiary(address(this), provider, slaRegistry);
+        beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator);
     }
 
-    function setupBeneficiary(address _admin, address _provider, address _slaRegistry) public returns (Beneficiary) {
+    function setupBeneficiary(
+        address admin_,
+        address withdrawer_,
+        CommonTypes.FilActorId provider_,
+        SLAAllocator slaAllocator_
+    ) public returns (Beneficiary) {
         Beneficiary impl = new Beneficiary();
         // solhint-disable gas-small-strings
-        bytes memory initData =
-            abi.encodeWithSignature("initialize(address,address,address)", _admin, _provider, _slaRegistry);
+        bytes memory initData = abi.encodeCall(Beneficiary.initialize, (admin_, withdrawer_, provider_, slaAllocator_));
         // solhint-enable gas-small-strings
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         return Beneficiary(payable(address(proxy)));
@@ -59,12 +65,12 @@ contract BeneficiaryTest is Test {
 
     function testIsManagerSet() public view {
         bytes32 managerRole = beneficiary.MANAGER_ROLE();
-        assertTrue(beneficiary.hasRole(managerRole, provider));
+        assertTrue(beneficiary.hasRole(managerRole, manager));
     }
 
     function testIsWithdrawerSet() public view {
         bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
-        assertTrue(beneficiary.hasRole(withdrawerRole, provider));
+        assertTrue(beneficiary.hasRole(withdrawerRole, manager));
     }
 
     function testIsManagerSetAsWithdrawerRoleAdmin() public view {
@@ -96,7 +102,7 @@ contract BeneficiaryTest is Test {
 
     function testWithdrawForGreenBand() public {
         vm.deal(address(beneficiary), 10000);
-        vm.startPrank(provider);
+        vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
         emit Beneficiary.Withdrawn(address(0x123), 10000, 0);
@@ -105,10 +111,10 @@ contract BeneficiaryTest is Test {
     }
 
     function testWithdrawForAmberBand() public {
-        address providerWithAmberBandScore = address(0x123);
-        beneficiary = setupBeneficiary(address(this), providerWithAmberBandScore, slaRegistry);
+        CommonTypes.FilActorId providerWithAmberBandScore = CommonTypes.FilActorId.wrap(0x123);
+        beneficiary = setupBeneficiary(address(this), manager, providerWithAmberBandScore, slaAllocator);
         vm.deal(address(beneficiary), 10000);
-        vm.startPrank(providerWithAmberBandScore);
+        vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
         emit Beneficiary.Withdrawn(address(0x888), 9000, 1000);
@@ -117,10 +123,10 @@ contract BeneficiaryTest is Test {
     }
 
     function testWithdrawForRedBand() public {
-        address providerWithRedBandScore = address(0x456);
-        beneficiary = setupBeneficiary(address(this), providerWithRedBandScore, slaRegistry);
+        CommonTypes.FilActorId providerWithRedBandScore = CommonTypes.FilActorId.wrap(0x456);
+        beneficiary = setupBeneficiary(address(this), manager, providerWithRedBandScore, slaAllocator);
         vm.deal(address(beneficiary), 10000);
-        vm.startPrank(providerWithRedBandScore);
+        vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
         emit Beneficiary.Withdrawn(address(0x888), 5000, 5000);
@@ -143,7 +149,7 @@ contract BeneficiaryTest is Test {
     function testRevertsWithdrawalFailed() public {
         address to = address(new RevertingReceiver());
         vm.deal(address(beneficiary), 10000);
-        vm.startPrank(provider);
+        vm.startPrank(manager);
         vm.expectRevert(abi.encodeWithSelector(Beneficiary.WithdrawalFailed.selector));
 
         beneficiary.withdraw(payable(to));
@@ -152,7 +158,7 @@ contract BeneficiaryTest is Test {
 
     function testSetWithdrawerRoleAndRevoke() public {
         bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
-        vm.startPrank(provider);
+        vm.startPrank(manager);
 
         beneficiary.grantRole(withdrawerRole, address(0x123));
         assertTrue(beneficiary.hasRole(withdrawerRole, address(0x123)));

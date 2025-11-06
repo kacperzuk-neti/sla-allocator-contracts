@@ -5,6 +5,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 
 /**
  * @title SLI Oracle
@@ -34,16 +35,16 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
         uint16 stability;
     }
     /**
-     * @notice Mapping of provider addresses to their SLI attestations
+     * @notice Mapping of provider IDs to their SLI attestations
      */
-    mapping(address provider => SLIAttestation attestation) public attestations;
+    mapping(CommonTypes.FilActorId provider => SLIAttestation attestation) public attestations;
 
     /**
      * @notice Emitted when SLI values are updated for a provider
-     * @param provider Address of the provider
+     * @param provider ID of the provider
      * @param slis New SLI values
      */
-    event SLIAttestationUpdate(address indexed provider, SLIAttestation indexed slis);
+    event SLIAttestationUpdate(CommonTypes.FilActorId indexed provider, SLIAttestation indexed slis);
 
     /**
      * @notice Disabled constructor (proxy pattern)
@@ -68,10 +69,10 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
 
     /**
      * @notice Sets SLI values for a provider
-     * @param provider Address of the provider
+     * @param provider ID of the provider
      * @param slis New SLI values
      */
-    function setSLI(address provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE) {
+    function setSLI(CommonTypes.FilActorId provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE) {
         emit SLIAttestationUpdate(provider, slis);
         attestations[provider] = slis;
     }
