@@ -171,7 +171,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     function changeBeneficiary(
         CommonTypes.FilActorId minerID,
-        CommonTypes.FilAddress memory newBeneficiary,
+        CommonTypes.FilAddress calldata newBeneficiary,
         uint256 newQuota,
         int64 newExpirationChainEpoch
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -188,5 +188,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         }
     }
 
+    // solhint-disable-next-line use-natspec
     receive() external payable {}
 }

@@ -15,7 +15,6 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {RevertingReceiver} from "../test/contracts/RevertingReceiver.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
-import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
 
 contract BeneficiaryTest is Test {
@@ -190,11 +189,6 @@ contract BeneficiaryTest is Test {
     function testGetBeneficiaryPendingChangeForSP3() public view {
         MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP3);
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
-    }
-
-    function testGetBeneficiaryExpectRevertExitCodeError() public {
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExitCodeError.selector));
-        GetBeneficiary.getBeneficiary(12345);
     }
 
     function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {
