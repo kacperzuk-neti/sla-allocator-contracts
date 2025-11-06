@@ -12,21 +12,24 @@ import {Beneficiary} from "./Beneficiary.sol";
  * instances at predictable addresses.
  */
 contract BeaconProxyFactory is UpgradeableBeacon {
+    error InstanceAlreadyExists();
+
     /**
      * @notice Tracks the deployment counter for each manager
      */
     mapping(address owner => uint256 deployCounter) public nonce;
 
     /**
-     * @notice Returns the deployment status of a proxy contract by its address
+     * @notice Tracks deployed instance by provider address
      */
-    mapping(address proxy => bool isDeployed) public proxyDeployed;
+    mapping(address provider => address contractAddress) public instances;
 
     /**
      * @notice Emitted when a new proxy is successfully created
      * @param proxy The address of the newly deployed proxy
+     * @param provider The provider for which the proxy was created
      */
-    event ProxyCreated(address indexed proxy);
+    event ProxyCreated(address indexed proxy, address indexed provider);
 
     /**
      * @notice Constructor for BeaconProxyFactory
@@ -40,18 +43,24 @@ contract BeaconProxyFactory is UpgradeableBeacon {
     /**
      * @notice Creates a new instance of an upgradeable contract.
      * @dev Uses BeaconProxy to create a new proxy instance, pointing to the Beacon for the logic contract.
+     * @dev Reverts if an instance for the given provider already exists.
      * @param manager_ The address of the manager responsible for the contract.
      * @param _provider The address of the provider responsible for the contract.
      * @param _slaRegistry The address of the SLA registry contract.
      */
     function create(address manager_, address _provider, address _slaRegistry) external {
+        if (instances[_provider] != address(0)) {
+            revert InstanceAlreadyExists();
+        }
+
         nonce[manager_]++;
         bytes memory initCode = abi.encodePacked(
             type(BeaconProxy).creationCode,
             abi.encode(address(this), abi.encodeCall(Beneficiary.initialize, (manager_, _provider, _slaRegistry)))
         );
         address proxy = Create2.deploy(0, keccak256(abi.encode(manager_, nonce[manager_])), initCode);
-        proxyDeployed[proxy] = true;
-        emit ProxyCreated(proxy);
+
+        instances[_provider] = proxy;
+        emit ProxyCreated(proxy, _provider);
     }
 }
