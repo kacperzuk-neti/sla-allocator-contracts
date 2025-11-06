@@ -2,25 +2,29 @@
 // solhint-disable use-natspec
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
+
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
-import {SLAAllocator} from "../src/SLAAllocator.sol";
-import {SLARegistry} from "../src/SLAAllocator.sol";
+
 import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
 import {Client} from "../src/Client.sol";
 import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
-import {BuiltinActorsMock} from "./contracts/BuiltinActorsMock.sol";
-import {MockProxy} from "./contracts/MockProxy.sol";
+import {SLAAllocator} from "../src/SLAAllocator.sol";
+import {SLARegistry} from "../src/SLAAllocator.sol";
+
+import {ActorIdMock} from "./contracts/ActorIdMock.sol";
 import {MockClient} from "./contracts/MockClient.sol";
+import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLARegistry} from "./contracts/MockSLARegistry.sol";
 
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
     MockSLARegistry public slaRegistry;
-    BuiltinActorsMock public builtinActorsMock;
     SLAAllocator.SLA[] public slas;
+    ActorIdMock public actorIdMock;
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     // solhint-disable var-name-mixedcase
@@ -34,10 +38,10 @@ contract SLAAllocatorTest is Test {
     // solhint-enable var-name-mixedcase
 
     function setUp() public {
-        builtinActorsMock = new BuiltinActorsMock();
-        address mockProxy = address(new MockProxy());
-        vm.etch(CALL_ACTOR_ID, address(mockProxy).code);
-        vm.etch(address(5555), address(builtinActorsMock).code);
+        actorIdMock = new ActorIdMock();
+        address actorIdProxy = address(new MockProxy(address(5555)));
+        vm.etch(CALL_ACTOR_ID, address(actorIdMock).code);
+        vm.etch(address(5555), address(actorIdProxy).code);
         BeneficiaryFactory beneficiaryFactory = new BeneficiaryFactory();
         Client clientSmartContract = Client(address(new MockClient()));
         slaRegistry = new MockSLARegistry();
