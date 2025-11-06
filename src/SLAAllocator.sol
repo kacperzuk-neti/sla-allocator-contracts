@@ -77,6 +77,8 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     event SLARegistered(address indexed client, CommonTypes.FilActorId indexed provider);
 
+    error BeneficiaryFactoryAlreadySet();
+
     /**
      * @notice Disabled constructor (proxy pattern)
      */
@@ -88,14 +90,22 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Contract initializator. Should be called during deployment
      * @param admin Contract owner
      */
-    function initialize(address admin, Client clientSmartContract_, BeneficiaryFactory beneficiaryFactory_)
-        external
-        initializer
-    {
+    function initialize(address admin) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
+    }
+
+    /**
+     * @notice Setter for beneficiary factory
+     * @param clientSmartContract_ Instance of Client smart contract
+     * @param beneficiaryFactory_ Instance of BeneficiaryFactory
+     */
+    function initialize2(Client clientSmartContract_, BeneficiaryFactory beneficiaryFactory_)
+        external
+        reinitializer(2)
+    {
         beneficiaryFactory = beneficiaryFactory_;
         clientSmartContract = clientSmartContract_;
     }

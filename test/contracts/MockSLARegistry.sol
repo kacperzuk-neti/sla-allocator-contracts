@@ -19,7 +19,7 @@ contract MockSLARegistry {
         ret = score_;
     }
 
-    function score(address, CommonTypes.FilActorId) external returns (uint256) {
+    function score(address, CommonTypes.FilActorId) external view returns (uint256) {
         if (shouldRevert) revert Err();
         return ret;
     }

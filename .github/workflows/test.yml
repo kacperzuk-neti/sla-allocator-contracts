@@ -45,7 +45,7 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.4.3
-      
+
       - name: Install lcov
         run: sudo apt-get -y install lcov
 
@@ -68,6 +68,10 @@ jobs:
           forge --version
           forge build --build-info --sizes
         id: build_solidity
+
+      - name: Test deploy script
+        run: |
+          forge script DevDeploy
 
       - name: Check if ABIs are up-to-date
         run: ./ci/check-abis.sh
