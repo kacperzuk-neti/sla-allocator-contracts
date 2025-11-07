@@ -6,6 +6,7 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {SLIOracle} from "../src/SLIOracle.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract SLIOracleTest is Test {
     SLIOracle public sliOracle;
@@ -27,11 +28,11 @@ contract SLIOracleTest is Test {
         address newImpl = address(new SLIOracle());
         address unauthorized = vm.addr(1);
         bytes32 upgraderRole = sliOracle.UPGRADER_ROLE();
-        // solhint-disable-next-line gas-small-strings
-        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
 
         vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, upgraderRole)
+        );
         sliOracle.upgradeToAndCall(newImpl, "");
     }
 

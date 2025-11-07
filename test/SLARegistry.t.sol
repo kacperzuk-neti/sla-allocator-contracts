@@ -8,6 +8,7 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {SLARegistry} from "../src/SLARegistry.sol";
 import {SLIOracle} from "../src/SLIOracle.sol";
 import {MockSLIOracle} from "./contracts/MockSLIOracle.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract SLARegistryTest is Test {
     SLARegistry public slaRegistry;
@@ -38,11 +39,11 @@ contract SLARegistryTest is Test {
         address newImpl = address(new SLARegistry());
         address unauthorized = vm.addr(1);
         bytes32 upgraderRole = slaRegistry.UPGRADER_ROLE();
-        // solhint-disable-next-line gas-small-strings
-        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
 
         vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, upgraderRole)
+        );
         slaRegistry.upgradeToAndCall(newImpl, "");
     }
 
