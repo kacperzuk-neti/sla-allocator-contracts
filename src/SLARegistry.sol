@@ -9,7 +9,7 @@ import {SLIOracle} from "./SLIOracle.sol";
 
 /**
  * @title SLA Registry
- * @notice
+ * @notice Upgradeable contract for managing SLA deals with role-based access control
  */
 contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
@@ -118,6 +118,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
 
     // solhint-enable no-empty-blocks
 
+    // solhint-disable gas-strict-inequalities
     /**
      * @notice Calculate the score for a given client/provider SLA.
      * @param client The address of the client.
@@ -127,10 +128,8 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
     function score(address client, CommonTypes.FilActorId provider) public view returns (uint256) {
         SLAParams storage sla = slas[client][provider];
 
-        if (!sla.registered) {
-            revert SLAUnknown(client, provider);
-        }
-
+        if (!sla.registered) revert SLAUnknown(client, provider);
+        
         (
             uint256 lastUpdate,
             uint32 latency,
@@ -178,4 +177,5 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
 
         return 100 * slasMet / slasDefined;
     }
+    // solhint-enable gas-strict-inequalities
 }

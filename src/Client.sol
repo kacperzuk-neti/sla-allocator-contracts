@@ -6,6 +6,10 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 
+/**
+ * @title Client
+ * @notice Upgradeable contract for managing client allowances with role-based access control
+ */
 contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
      * @notice Allocator role which allows for increasing and decreasing allowances
