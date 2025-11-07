@@ -63,7 +63,7 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param implementation The address of the initial Beneficiary implementation for the beacon
      * @param slaAllocator_ The address of the SLAAllocator
      */
-    function initialize(address admin, address implementation, SLAAllocator slaAllocator_) public initializer {
+    function initialize(address admin, address implementation, SLAAllocator slaAllocator_) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -79,8 +79,9 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param admin The address of the admin responsible for the contract.
      * @param withdrawer The address of the withdrawer responsible for the contract.
      * @param provider The ID of the provider responsible for the contract.
+     * @param burnAddress Address of the burn address
      */
-    function create(address admin, address withdrawer, CommonTypes.FilActorId provider) external {
+    function create(address admin, address withdrawer, CommonTypes.FilActorId provider, address burnAddress) external {
         if (instances[provider] != address(0)) {
             revert InstanceAlreadyExists();
         }
@@ -89,7 +90,9 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
 
         bytes memory initCode = abi.encodePacked(
             type(BeaconProxy).creationCode,
-            abi.encode(beacon, abi.encodeCall(Beneficiary.initialize, (admin, withdrawer, provider, slaAllocator)))
+            abi.encode(
+                beacon, abi.encodeCall(Beneficiary.initialize, (admin, withdrawer, provider, slaAllocator, burnAddress))
+            )
         );
 
         address proxy = Create2.deploy(0, keccak256(abi.encode(admin, provider, nonce[admin][provider])), initCode);

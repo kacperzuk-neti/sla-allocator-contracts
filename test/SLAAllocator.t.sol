@@ -84,9 +84,10 @@ contract SLAAllocatorTest is Test {
     function testAuthorizeUpgradeRevert() public {
         address newImpl = address(new SLAAllocator());
         bytes32 upgraderRole = slaAllocator.UPGRADER_ROLE();
-        // solhint-disable-next-line gas-small-strings
-        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
-        vm.expectRevert(abi.encodeWithSelector(sel, address(this), upgraderRole));
+        vm.prank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, upgraderRole)
+        );
         slaAllocator.upgradeToAndCall(newImpl, "");
     }
 
@@ -197,9 +198,10 @@ contract SLAAllocatorTest is Test {
 
     function testDecreaseAllowanceRevertUnathorized() public {
         bytes32 managerRole = slaAllocator.MANAGER_ROLE();
-        // solhint-disable-next-line gas-small-strings
-        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
-        vm.expectRevert(abi.encodeWithSelector(sel, address(this), managerRole));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(this), managerRole)
+        );
         slaAllocator.mintDataCap(1000);
     }
 

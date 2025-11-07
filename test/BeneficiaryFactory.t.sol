@@ -12,6 +12,7 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
 import {Beneficiary} from "../src/Beneficiary.sol";
 import {SLAAllocator} from "../src/SLAAllocator.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract BeneficiaryFactoryTest is Test {
     BeneficiaryFactory public factory;
@@ -19,6 +20,7 @@ contract BeneficiaryFactoryTest is Test {
     address public admin;
     address public slaAllocator;
     address public withdrawer;
+    address public burnAddress;
     CommonTypes.FilActorId public provider;
     BeneficiaryFactory public factoryImpl;
     bytes public initData;
@@ -28,6 +30,7 @@ contract BeneficiaryFactoryTest is Test {
         withdrawer = vm.addr(2);
         provider = CommonTypes.FilActorId.wrap(1);
         slaAllocator = vm.addr(101);
+        burnAddress = vm.addr(102);
         beneficiaryImpl = address(new Beneficiary());
 
         factoryImpl = new BeneficiaryFactory();
@@ -47,26 +50,26 @@ contract BeneficiaryFactoryTest is Test {
         address expectedProxy = computeProxyAddress(admin, withdrawer, provider, factory.nonce(admin, provider) + 1);
         emit BeneficiaryFactory.ProxyCreated(expectedProxy, provider);
 
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, burnAddress);
     }
 
     function testDeployMarksProxyAsDeployed() public {
         address expectedProxy = computeProxyAddress(admin, withdrawer, provider, factory.nonce(admin, provider) + 1);
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, burnAddress);
 
         assertTrue(factory.instances(provider) == expectedProxy);
     }
 
     function testDeployIncrementsNonce() public {
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, burnAddress);
         assertEq(factory.nonce(admin, provider), 1);
     }
 
     function testDeployRevertsIfInstanceExists() public {
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, burnAddress);
 
         vm.expectRevert(abi.encodeWithSelector(BeneficiaryFactory.InstanceAlreadyExists.selector));
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, burnAddress);
     }
 
     function computeProxyAddress(address admin_, address withdrawer_, CommonTypes.FilActorId provider_, uint256 nonce)
@@ -78,7 +81,9 @@ contract BeneficiaryFactoryTest is Test {
             type(BeaconProxy).creationCode,
             abi.encode(
                 address(factory.beacon()),
-                abi.encodeCall(Beneficiary.initialize, (admin_, withdrawer_, provider_, SLAAllocator(slaAllocator)))
+                abi.encodeCall(
+                    Beneficiary.initialize, (admin_, withdrawer_, provider_, SLAAllocator(slaAllocator), burnAddress)
+                )
             )
         );
         bytes32 salt = keccak256(abi.encode(admin, provider, nonce));
@@ -90,11 +95,10 @@ contract BeneficiaryFactoryTest is Test {
         address newImpl = address(new BeneficiaryFactory());
         address unauthorized = vm.addr(999);
         bytes32 upgraderRole = factory.UPGRADER_ROLE();
-        // solhint-disable-next-line gas-small-strings
-        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
-
         vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, upgraderRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, upgraderRole)
+        );
         factory.upgradeToAndCall(newImpl, "");
     }
 }
