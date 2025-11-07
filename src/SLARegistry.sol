@@ -129,7 +129,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
         SLAParams storage sla = slas[client][provider];
 
         if (!sla.registered) revert SLAUnknown(client, provider);
-        
+
         (
             uint256 lastUpdate,
             uint32 latency,
