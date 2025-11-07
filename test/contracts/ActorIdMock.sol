@@ -52,6 +52,10 @@ contract ActorIdMock {
         if (methodNum == 1570634796 && target == 20000) {
             return abi.encode(0, 0x00, "");
         }
+        if (methodNum == 3916220144) {
+            // Success send
+            return abi.encode(0, 0x00, "");
+        }
 
         revert MethodNotFound();
     }

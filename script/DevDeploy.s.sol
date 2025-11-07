@@ -35,7 +35,9 @@ contract DevDeploy is Script {
     function deploySLAAllocator() internal returns (SLAAllocator) {
         address slaAllocatorImpl = address(new SLAAllocator());
         return SLAAllocator(
-            address(new ERC1967Proxy(slaAllocatorImpl, abi.encodeCall(SLAAllocator.initialize, (msg.sender))))
+            address(
+                new ERC1967Proxy(slaAllocatorImpl, abi.encodeCall(SLAAllocator.initialize, (msg.sender, msg.sender)))
+            )
         );
     }
 
