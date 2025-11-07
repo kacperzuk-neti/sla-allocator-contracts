@@ -157,13 +157,13 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         pure
         returns (uint256 amountToSP, uint256 amountToBeRedirected)
     {
-        if (score >= 80) {
+        if (score > 75) {
             return (amount, 0);
-        } else if (score >= 40 && score < 80) {
-            uint256 amountSlashed = amount / 10;
+        } else if (score >= 50) {
+            uint256 amountSlashed = amount / 2;
             return (amount - amountSlashed, amountSlashed);
         } else {
-            uint256 amountSlashed = amount / 2;
+            uint256 amountSlashed = amount * 9 / 10;
             return (amount - amountSlashed, amountSlashed);
         }
     }

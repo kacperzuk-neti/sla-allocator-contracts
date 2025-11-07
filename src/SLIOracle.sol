@@ -27,12 +27,12 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      */
     struct SLIAttestation {
         uint256 lastUpdate;
-        uint16 availability;
-        uint16 latency;
-        uint16 indexing;
-        uint16 retention;
-        uint16 bandwidth;
-        uint16 stability;
+        uint32 latency; // TTFB in milliseconds
+        uint16 retention; // ??
+        uint16 bandwidth; // Mbps
+        uint16 stability; // ??
+        uint8 availability; // 0-100, %
+        uint8 indexing; // 0-100, %
     }
     /**
      * @notice Mapping of provider IDs to their SLI attestations

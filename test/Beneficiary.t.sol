@@ -131,7 +131,7 @@ contract BeneficiaryTest is Test {
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(SP1Address, 9000, 1000);
+        emit Beneficiary.Withdrawn(SP1Address, 5000, 5000);
         beneficiary.withdraw(SP1Address);
     }
 
@@ -142,7 +142,7 @@ contract BeneficiaryTest is Test {
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(SP1Address, 5000, 5000);
+        emit Beneficiary.Withdrawn(SP1Address, 1000, 9000);
         beneficiary.withdraw(SP1Address);
     }
 

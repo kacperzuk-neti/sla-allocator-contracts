@@ -168,19 +168,9 @@
         "internalType": "struct SLARegistry.SLAParams",
         "components": [
           {
-            "name": "availability",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
             "name": "latency",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "indexing",
-            "type": "uint16",
-            "internalType": "uint16"
+            "type": "uint32",
+            "internalType": "uint32"
           },
           {
             "name": "retention",
@@ -196,6 +186,16 @@
             "name": "stability",
             "type": "uint16",
             "internalType": "uint16"
+          },
+          {
+            "name": "availability",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "indexing",
+            "type": "uint8",
+            "internalType": "uint8"
           },
           {
             "name": "registered",
@@ -270,7 +270,7 @@
   },
   {
     "type": "function",
-    "name": "sla",
+    "name": "slas",
     "inputs": [
       {
         "name": "client",
@@ -285,19 +285,9 @@
     ],
     "outputs": [
       {
-        "name": "availability",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
         "name": "latency",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "indexing",
-        "type": "uint16",
-        "internalType": "uint16"
+        "type": "uint32",
+        "internalType": "uint32"
       },
       {
         "name": "retention",
@@ -313,6 +303,16 @@
         "name": "stability",
         "type": "uint16",
         "internalType": "uint16"
+      },
+      {
+        "name": "availability",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "indexing",
+        "type": "uint8",
+        "internalType": "uint8"
       },
       {
         "name": "registered",

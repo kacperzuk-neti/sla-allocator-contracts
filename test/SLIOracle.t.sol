@@ -54,12 +54,12 @@ contract SLIOracleTest is Test {
 
         (
             uint256 storedLastUpdate,
-            uint16 storedAvailability,
-            uint16 storedLatency,
-            uint16 storedIndexing,
+            uint32 storedLatency,
             uint16 storedRetention,
             uint16 storedBandwidth,
-            uint16 storedStability
+            uint16 storedStability,
+            uint8 storedAvailability,
+            uint8 storedIndexing
         ) = sliOracle.attestations(provider);
 
         // Compare lastUpdate is set correctly in storage
