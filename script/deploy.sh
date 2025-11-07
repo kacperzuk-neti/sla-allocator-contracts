@@ -85,7 +85,7 @@ sliOracle=$(deployOracle)
 slaRegistry=$(deploySLARegistry "$sliOracle")
 ((nonce += 2))
 
-cast send --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" "$slaAllocator" 'initialize2(address,address)' "$client" "$beneficiaryFactory" >/dev/null
+cast send --nonce "$nonce" --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" "$slaAllocator" 'initialize2(address,address)' "$client" "$beneficiaryFactory" >/dev/null
 ((nonce += 1))
 
 echo "BeneficiaryFactory: $beneficiaryFactory"
