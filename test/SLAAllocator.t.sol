@@ -16,9 +16,12 @@ import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {SLARegistry} from "../src/SLAAllocator.sol";
 
 import {ActorIdMock} from "./contracts/ActorIdMock.sol";
+import {ActorIdExitCodeErrorFailingMock} from "./contracts/ActorIdExitCodeErrorFailingMock.sol";
+import {ActorIdInvalidResponseLengthFailingMock} from "./contracts/ActorIdInvalidResponseLengthFailingMock.sol";
 import {MockClient} from "./contracts/MockClient.sol";
 import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLARegistry} from "./contracts/MockSLARegistry.sol";
+import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
 
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
@@ -151,10 +154,27 @@ contract SLAAllocatorTest is Test {
         slaAllocator.mintDataCap(1000);
     }
 
-    function testDecreaseAllowanceRevertAmountEqualZero() public {
+    function testMintDatacapRevertAmountEqualZero() public {
         vm.prank(manager);
         vm.expectRevert(SLAAllocator.AmountEqualZero.selector);
         slaAllocator.mintDataCap(0);
+    }
+
+    function testMintDataCapRevertExitCodeError() public {
+        ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
+        vm.etch(CALL_ACTOR_ID, address(actorIdFailingExitCodeErrorMock).code);
+        vm.prank(manager);
+        vm.expectRevert(abi.encodeWithSelector(SLAAllocator.ExitCodeError.selector, 1));
+        slaAllocator.mintDataCap(1000);
+    }
+
+    function testMintDataCapRevertInvalidResponseLength() public {
+        ActorIdInvalidResponseLengthFailingMock actorIdInvalidResponseLengthFailingMock =
+            new ActorIdInvalidResponseLengthFailingMock();
+        vm.etch(CALL_ACTOR_ID, address(actorIdInvalidResponseLengthFailingMock).code);
+        vm.prank(manager);
+        vm.expectRevert(abi.encodeWithSelector(Actor.InvalidResponseLength.selector));
+        slaAllocator.mintDataCap(1000);
     }
 
     function testIsManagerSet() public view {
