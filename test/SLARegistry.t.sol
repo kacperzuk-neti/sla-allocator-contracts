@@ -51,14 +51,14 @@ contract SLARegistryTest is Test {
         slaRegistry.registerSLA(client, provider, slaParams);
 
         (
-            uint16 availability,
-            uint16 latency,
-            uint16 indexing,
+            uint32 latency,
             uint16 retention,
             uint16 bandwidth,
             uint16 stability,
+            uint8 availability,
+            uint8 indexing,
             bool registered
-        ) = slaRegistry.sla(client, provider);
+        ) = slaRegistry.slas(client, provider);
 
         assertEq(availability, slaParams.availability);
         assertEq(latency, slaParams.latency);

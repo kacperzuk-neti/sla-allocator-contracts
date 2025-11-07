@@ -22,7 +22,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @dev The key is a tuple of client and provider addresses
      * @dev The value is a struct containing the SLA parameters
      */
-    mapping(address client => mapping(CommonTypes.FilActorId provider => SLAParams)) public sla;
+    mapping(address client => mapping(CommonTypes.FilActorId provider => SLAParams)) public slas;
 
     /**
      * @notice SLIOracle instance
@@ -54,12 +54,12 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @notice Struct containing the SLA deal parameters
      */
     struct SLAParams {
-        uint16 availability;
-        uint16 latency;
-        uint16 indexing;
-        uint16 retention;
-        uint16 bandwidth;
-        uint16 stability;
+        uint32 latency; // TTFB in milliseconds
+        uint16 retention; // ??
+        uint16 bandwidth; // Mbps
+        uint16 stability; // ??
+        uint8 availability; // 0-100, %
+        uint8 indexing; // 0-100, %
         bool registered;
     }
 
@@ -92,7 +92,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
     function registerSLA(address client, CommonTypes.FilActorId provider, SLAParams memory slaParams) public {
         _checkSLARegistered(client, provider);
         slaParams.registered = true;
-        sla[client][provider] = slaParams;
+        slas[client][provider] = slaParams;
         emit SLARegistered(client, provider);
     }
 
@@ -103,7 +103,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @dev Will revert if a SLA is already registered for the given client and provider
      */
     function _checkSLARegistered(address client, CommonTypes.FilActorId provider) private view {
-        if (sla[client][provider].registered) {
+        if (slas[client][provider].registered) {
             revert SLAAlreadyRegistered(client, provider);
         }
     }
@@ -119,30 +119,63 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
     // solhint-enable no-empty-blocks
 
     /**
-     * @notice Retrieves the score for a given provider.
-     * @dev Returns the mocked score for a given provider.
-     * @param provider The address of the provider.
-     * @return The score of the provider.
+     * @notice Calculate the score for a given client/provider SLA.
+     * @param client The address of the client.
+     * @param provider The ID of the provider.
+     * @return The score for SLA.
      */
     function score(address client, CommonTypes.FilActorId provider) public view returns (uint256) {
-        if (!sla[client][provider].registered) {
+        SLAParams storage sla = slas[client][provider];
+
+        if (!sla.registered) {
             revert SLAUnknown(client, provider);
         }
 
         (
             uint256 lastUpdate,
-            /* uint16 availability */,
-            /* uint16 latency */,
-            /* uint16 indexing */,
-            /* uint16 retention */,
-            /* uint16 bandwidth */,
-            /* uint16 stability */
+            uint32 latency,
+            uint16 retention,
+            uint16 bandwidth,
+            uint16 stability,
+            uint8 availability,
+            uint8 indexing
         ) = oracle.attestations(provider);
 
         if (lastUpdate == 0) return 0;
 
-        // FIXME
+        uint256 slasDefined;
+        uint256 slasMet;
 
-        return 1;
+        if (sla.latency != 0) {
+            slasDefined++;
+            if (latency <= sla.latency) slasMet++;
+        }
+
+        if (sla.retention != 0) {
+            slasDefined++;
+            if (retention >= sla.retention) slasMet++;
+        }
+
+        if (sla.bandwidth != 0) {
+            slasDefined++;
+            if (bandwidth >= sla.bandwidth) slasMet++;
+        }
+
+        if (sla.stability != 0) {
+            slasDefined++;
+            if (stability >= sla.stability) slasMet++;
+        }
+
+        if (sla.availability != 0) {
+            slasDefined++;
+            if (availability >= sla.availability) slasMet++;
+        }
+
+        if (sla.indexing != 0) {
+            slasDefined++;
+            if (indexing >= sla.indexing) slasMet++;
+        }
+
+        return 100 * slasMet / slasDefined;
     }
 }
