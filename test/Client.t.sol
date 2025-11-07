@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// solhint-disable use-natspec
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
@@ -98,6 +99,7 @@ contract ClientTest is Test {
         address newImpl = address(new Client());
         address unauthorized = vm.addr(1);
         bytes32 adminRole = client.DEFAULT_ADMIN_ROLE();
+        // solhint-disable-next-line gas-small-strings
         bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
 
         vm.prank(unauthorized);
