@@ -37,6 +37,10 @@ contract ActorIdMock {
                 hex"82824400C2A101834E0002863C1F5CDAE42F95400000004D00A18F07D736B90BE5500000001A005B8D80854400D4C1014207D01A006ACFC0F5F4"
             );
         }
+        if (methodNum == 4158972569 && target == 70000) {
+            return
+                abi.encode(0, 0x51, hex"82824300FE07834E0002863C1F5CDAE42F95400000004A0007DAB13E6B1EE374501A000F3E58F6");
+        }
         if (methodNum == 4158972569 && target == 12345) {
             // Simulate error exit code
             return abi.encode(1, 0x51, hex"82824083404000F6");
@@ -90,3 +94,8 @@ contract ActorIdMock {
 // GetBeneficiaryReturn {
 //      ActiveBeneficiary active; beneficiary = f010000 term { quota: 200000000000000000000000000000, used_quota: 50000000000000000000000000000, expiration: 2000000 }
 //      PendingBeneficiaryChange proposed; = { beneficiary = f024760, new_quota: 13943041, new_expiration: 2000, approved_by_beneficiary: true, approved_by_nominee: false } }
+
+//SP7 - 70000 - 82824300FE07834E0002863C1F5CDAE42F95400000004A0007DAB13E6B1EE374501A000F3E58F6
+// GetBeneficiaryReturn {
+//      ActiveBeneficiary active; beneficiary = f01022 term { quota: 200000000000000000000000000000, used_quota: 144885653716913583184, expiration: 999000 }
+//      PendingBeneficiaryChange proposed; = null

@@ -37,6 +37,7 @@ contract BeneficiaryTest is Test {
     CommonTypes.FilActorId public SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
     CommonTypes.FilActorId public SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
     CommonTypes.FilActorId public SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
+    CommonTypes.FilActorId public SP4 = CommonTypes.FilActorId.wrap(uint64(70000));
 
     CommonTypes.FilAddress public SP1Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP1));
     CommonTypes.FilAddress public SP2Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP2));
@@ -212,6 +213,10 @@ contract BeneficiaryTest is Test {
     function testGetBeneficiaryPendingChangeForSP3() public view {
         MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP3);
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
+    }
+
+    function testGetBeneficiaryWithChecksForSP4() public view {
+        GetBeneficiary.getBeneficiaryWithChecks(SP4, true, true, false);
     }
 
     function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {
