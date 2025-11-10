@@ -189,4 +189,16 @@ contract SLAAllocatorTest is Test {
     function testIsClientSmartContractSet() public view {
         assertEq(address(slaAllocator.clientSmartContract()), address(clientSmartContract));
     }
+
+    function testGetProvidersReturnsAddedProviders() public {
+        slas[0].provider = SP2;
+        slaAllocator.requestDataCap(slas, 1);
+
+        CommonTypes.FilActorId[] memory providers = slaAllocator.getProviders();
+        assertEq(providers.length, 1);
+
+        uint64 got = uint64(CommonTypes.FilActorId.unwrap(providers[0]));
+        uint64 expected = uint64(CommonTypes.FilActorId.unwrap(SP2));
+        assertEq(got, expected);
+    }
 }

@@ -84,6 +84,19 @@
   },
   {
     "type": "function",
+    "name": "getProviders",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64[]",
+        "internalType": "CommonTypes.FilActorId[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
