@@ -204,4 +204,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
             revert ExitCodeError(exitCode);
         }
     }
+
+    /**
+     * @notice Get the list of providers
+     * @return Array of provider FilActorIds
+     */
+    function getProviders() external view returns (CommonTypes.FilActorId[] memory) {
+        return providers;
+    }
 }
