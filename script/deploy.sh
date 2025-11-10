@@ -46,10 +46,14 @@ function deployClient() {
     echo "deployClient needs slaAllocator address" >&2
     exit 1
   fi
-
+  
+  if [ -z "$2" ]; then
+    echo "deployClient needs beneficiaryFactory address" >&2
+    exit 1
+  fi
   impl=$(_deploy Client)
   ((nonce += 1))
-  calldata=$(cast calldata 'initialize(address,address)' "$ADMIN" "$1")
+  calldata=$(cast calldata 'initialize(address,address,address)' "$ADMIN" "$1" "$2")
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 
@@ -73,11 +77,11 @@ echo "Deployer: $ADMIN"
 slaAllocator=$(deploySLAAllocator)
 ((nonce += 2))
 
-client=$(deployClient "$slaAllocator")
-((nonce += 2))
-
 beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator")
 ((nonce += 3))
+
+client=$(deployClient "$slaAllocator" "$beneficiaryFactory")
+((nonce += 2))
 
 sliOracle=$(deployOracle)
 ((nonce += 2))

@@ -5,6 +5,9 @@ import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {Utils} from "./Utils.sol";
+import {BeneficiaryFactory} from "../BeneficiaryFactory.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
+import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 
 /**
  * @title GetBeneficiary
@@ -16,7 +19,9 @@ library GetBeneficiary {
     error QuotaCannotBeNegative();
     error ExpirationBelowFiveYears();
     error QuotaNotUnlimited();
-
+    error InvalidBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
+    error BeneficiaryInstanceNonexistent();
+    error FailedToGetActorID();
     /**
      * @notice Expiration time of 5 years in Filecoin epochs (assuming 30s epochs)
      * @dev 5 years = 5 * 365 * 24 * 60 * 60 seconds / 30 seconds per epoch = 5,256,000 epochs
@@ -52,6 +57,7 @@ library GetBeneficiary {
      * @dev Performs optional checks on the beneficiary address, quota, and expiration.
      *      Reverts with specific errors if any checks fail.
      * @param minerID The Filecoin miner actor id.
+     * @param beneficiaryFactory The BeneficiaryFactory contract instance.
      * @param checkAddress If true, checks that the beneficiary address is set.
      * @param checkQuota If true, checks that the quota is not negative.
      * @param checkExpiration If true, checks that the expiration is at least 5 years.
@@ -59,6 +65,7 @@ library GetBeneficiary {
      */
     function getBeneficiaryWithChecks(
         CommonTypes.FilActorId minerID,
+        BeneficiaryFactory beneficiaryFactory,
         bool checkAddress,
         bool checkQuota,
         bool checkExpiration
@@ -67,6 +74,19 @@ library GetBeneficiary {
 
         if (checkAddress) {
             if (beneficiaryData.active.beneficiary.data.length == 0) revert NoBeneficiarySet();
+            address beneficiaryContractAddress = beneficiaryFactory.instances(minerID);
+            if (beneficiaryContractAddress == address(0)) {
+                revert BeneficiaryInstanceNonexistent();
+            }
+            (bool success, uint64 beneficiaryContractAddressInt) =
+                FilAddressIdConverter.getActorID(beneficiaryContractAddress);
+            if (!success) {
+                revert FailedToGetActorID();
+            }
+            uint64 beneficiaryInt = PrecompilesAPI.resolveAddress(beneficiaryData.active.beneficiary);
+            if (beneficiaryContractAddressInt != beneficiaryInt) {
+                revert InvalidBeneficiary(beneficiaryInt, beneficiaryContractAddressInt);
+            }
         }
 
         if (checkQuota) {

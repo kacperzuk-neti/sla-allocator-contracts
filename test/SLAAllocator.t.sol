@@ -23,13 +23,24 @@ import {MockClient} from "./contracts/MockClient.sol";
 import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLARegistry} from "./contracts/MockSLARegistry.sol";
 import {Actor} from "filecoin-solidity/v0.8/utils/Actor.sol";
+import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
+import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
+import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
 
+// solhint-disable-next-line max-states-count
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
     MockSLARegistry public slaRegistry;
     Client public clientSmartContract;
     SLAAllocator.SLA[] public slas;
     ActorIdMock public actorIdMock;
+    MockBeneficiaryFactory public mockBeneficiaryFactory;
+    ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
+    ResolveAddressPrecompileFailingMock public resolveAddressPrecompileFailingMock;
+    ResolveAddressPrecompileMock public resolveAddress =
+        ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
+
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     // solhint-disable var-name-mixedcase
@@ -42,23 +53,25 @@ contract SLAAllocatorTest is Test {
 
     address public admin = vm.addr(1);
     address public manager = vm.addr(2);
-    BeneficiaryFactory public beneficiaryFactory;
     address public unauthorized = vm.addr(5);
 
     function setUp() public {
         actorIdMock = new ActorIdMock();
         address actorIdProxy = address(new MockProxy(address(5555)));
-        vm.etch(CALL_ACTOR_ID, address(actorIdMock).code);
-        vm.etch(address(5555), address(actorIdProxy).code);
-        beneficiaryFactory = new BeneficiaryFactory();
         clientSmartContract = Client(address(new MockClient()));
         slaRegistry = new MockSLARegistry();
+        resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
+        resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
+        mockBeneficiaryFactory = new MockBeneficiaryFactory();
 
+        vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
+        vm.etch(CALL_ACTOR_ID, address(actorIdMock).code);
+        vm.etch(address(5555), address(actorIdProxy).code);
         SLAAllocator impl = new SLAAllocator();
         bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (admin, manager));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         slaAllocator = SLAAllocator(address(proxy));
-        slaAllocator.initialize2(clientSmartContract, beneficiaryFactory);
+        slaAllocator.initialize2(clientSmartContract, mockBeneficiaryFactory);
 
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
     }
@@ -77,7 +90,16 @@ contract SLAAllocatorTest is Test {
         slaAllocator.upgradeToAndCall(newImpl, "");
     }
 
+    function testRequestDataCapRevertBeneficiaryInstanceNonexistent() public {
+        slas[0].provider = SP1;
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.BeneficiaryInstanceNonexistent.selector));
+        slaAllocator.requestDataCap(slas, 1);
+    }
+
     function testRequestDataCapExpirationBelowFiveYearsRevert() public {
+        resolveAddress.setId(uint64(10000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(10000);
+        mockBeneficiaryFactory.setInstance(SP1, beneficiaryEthAddressContract);
         slas[0].provider = SP1;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExpirationBelowFiveYears.selector));
         slaAllocator.requestDataCap(slas, 1);
@@ -90,12 +112,18 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapQuotaCannotBeNegativeRevert() public {
+        resolveAddress.setId(uint64(50000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
+        mockBeneficiaryFactory.setInstance(SP5, beneficiaryEthAddressContract);
         slas[0].provider = SP5;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaCannotBeNegative.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
     function testRequestDataCapSucceed() public {
+        resolveAddress.setId(uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
         slaAllocator.requestDataCap(slas, 1);
     }
@@ -107,23 +135,55 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapQuotaNotUnlimitedRevert() public {
+        resolveAddress.setId(uint64(60000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(60000);
+        mockBeneficiaryFactory.setInstance(SP6, beneficiaryEthAddressContract);
         slas[0].provider = SP6;
         vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaNotUnlimited.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
     function testRequestDataCapSingleClientPerSP() public {
+        resolveAddress.setId(uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
         slaAllocator.requestDataCap(slas, 1);
 
+        resolveAddress.setId(uint64(50000));
+        beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         vm.prank(vm.addr(5));
         vm.expectRevert(abi.encodeWithSelector(SLAAllocator.ProviderBoundToDifferentClient.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
+    function testRequestDataCapRevertInvalidBeneficiary() public {
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+        slas[0].provider = SP2;
+        resolveAddress.setId(uint64(50000));
+        beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.InvalidBeneficiary.selector, 50000, 20000));
+        slaAllocator.requestDataCap(slas, 1);
+    }
+
     function testRequestDataCapSameClientPerSPTwice() public {
+        resolveAddress.setId(uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
         slaAllocator.requestDataCap(slas, 1);
+        slaAllocator.requestDataCap(slas, 1);
+    }
+
+    function testRequestDataCapExpectRevertFailedToGetActorID() public {
+        ResolveAddressPrecompileFailingMock failingResolveAddress =
+            ResolveAddressPrecompileFailingMock(payable(0xFE00000000000000000000000000000000000001));
+        vm.etch(address(failingResolveAddress), address(resolveAddressPrecompileFailingMock).code);
+        mockBeneficiaryFactory.setInstance(SP2, vm.addr(3));
+        slas[0].provider = SP2;
+        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.FailedToGetActorID.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
@@ -184,7 +244,7 @@ contract SLAAllocatorTest is Test {
     }
 
     function testIsBeneficiaryFactorySet() public view {
-        assertEq(address(slaAllocator.beneficiaryFactory()), address(beneficiaryFactory));
+        assertEq(address(slaAllocator.beneficiaryFactory()), address(mockBeneficiaryFactory));
     }
 
     function testIsClientSmartContractSet() public view {

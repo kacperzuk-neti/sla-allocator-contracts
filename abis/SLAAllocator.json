@@ -615,6 +615,11 @@
   },
   {
     "type": "error",
+    "name": "BeneficiaryInstanceNonexistent",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ERC1967InvalidImplementation",
     "inputs": [
       {
@@ -657,7 +662,17 @@
   },
   {
     "type": "error",
+    "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FailedCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedToGetActorID",
     "inputs": []
   },
   {
@@ -668,6 +683,22 @@
         "name": "actorId",
         "type": "uint64",
         "internalType": "CommonTypes.FilActorId"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidBeneficiary",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expectedBeneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ]
   },

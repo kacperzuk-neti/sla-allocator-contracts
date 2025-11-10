@@ -6,21 +6,83 @@ import {Test} from "forge-std/Test.sol";
 import {Client} from "../src/Client.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
+import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
+import {DataCapTypes} from "filecoin-solidity/v0.8/types/DataCapTypes.sol";
+import {ActorIdExitCodeErrorFailingMock} from "./contracts/ActorIdExitCodeErrorFailingMock.sol";
+import {ActorIdMock} from "./contracts/ActorIdMock.sol";
+import {MockProxy} from "./contracts/MockProxy.sol";
+import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
+import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
+import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
+import {BuildInActorForTransferFunctionMock} from "./contracts/BuildInActorForTransferFunctionMock.sol";
 
 contract ClientTest is Test {
-    Client public client;
+    address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
+    address public datacapContract = address(0xfF00000000000000000000000000000000000007);
     address public allocator;
-    CommonTypes.FilActorId public providerFilActorId;
     address public clientAddress;
+    bytes public transferTo = abi.encodePacked(vm.addr(6));
+
+    CommonTypes.FilActorId public providerFilActorId;
+    // solhint-disable-next-line var-name-mixedcase
+    CommonTypes.FilActorId public SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
+
+    Client public client;
+    DataCapTypes.TransferParams public transferParams;
+
+    MockBeneficiaryFactory public mockBeneficiaryFactory;
+    ActorIdExitCodeErrorFailingMock public actorIdExitCodeErrorFailingMock;
+    BuildInActorForTransferFunctionMock public buildInActorForTransferFunctionMock;
+    ActorIdMock public actorIdMock;
+    ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
+    ResolveAddressPrecompileFailingMock public resolveAddressPrecompileFailingMock;
+    ResolveAddressPrecompileMock public resolveAddress =
+        ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
 
     function setUp() public {
         Client impl = new Client();
         allocator = address(0x123);
         providerFilActorId = CommonTypes.FilActorId.wrap(7);
         clientAddress = address(0x789);
-        bytes memory initData = abi.encodeWithSignature("initialize(address,address)", address(this), allocator);
+
+        mockBeneficiaryFactory = new MockBeneficiaryFactory();
+
+        // solhint-disable-next-line gas-small-strings
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,address)", address(this), allocator, mockBeneficiaryFactory
+        );
+
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         client = Client(address(proxy));
+
+        actorIdMock = new ActorIdMock();
+        actorIdExitCodeErrorFailingMock = new ActorIdExitCodeErrorFailingMock();
+        resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
+        resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
+        buildInActorForTransferFunctionMock = new BuildInActorForTransferFunctionMock();
+
+        address actorIdProxy = address(new MockProxy(address(5555)));
+        vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
+        vm.etch(address(5555), address(actorIdMock).code);
+        vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
+
+        actorIdMock.setGetClaimsResult(
+            hex"8282018081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+        );
+
+        // --- Dummy transfer params ---
+        transferParams = DataCapTypes.TransferParams({
+            to: CommonTypes.FilAddress(transferTo),
+            amount: CommonTypes.BigInt({val: hex"DE0B6B3A7640000000", neg: false}),
+            // [[[1000, 42(h'000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA22'),
+            //    2048, 518400, 5256000, 305], [...]], []]
+            operator_data: hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
+        });
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+        resolveAddress.setId(uint64(20000));
     }
 
     function testIsAdminSet() public view {
@@ -105,5 +167,124 @@ contract ClientTest is Test {
         vm.prank(unauthorized);
         vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, adminRole));
         client.upgradeToAndCall(newImpl, "");
+    }
+
+    function testInvalidClaimExtensionRequest() public {
+        // ClaimRequest length is 2 instead of 3
+        transferParams.operator_data = hex"828081821904B001";
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.InvalidClaimExtensionRequest.selector));
+        client.transfer(transferParams);
+    }
+
+    function testHandleFilecoinMethodExpectRevertInvalidCaller() public {
+        bytes memory params =
+            hex"821a85223bdf585b861903f3061903f34a006f05b59d3b2000000058458281861903e8d82a5828000181e2039220207dcae81b2a679a3955cc2e4b3504c23ce55b2db5dd2119841ecafa550e53900e1908001a0007e9001a005033401a0002d3028040";
+        vm.expectRevert(abi.encodeWithSelector(Client.InvalidCaller.selector, address(this), datacapContract));
+        client.handle_filecoin_method(3726118371, 81, params);
+    }
+
+    function testHandleFilecoinMethodExpectRevertInvalidTokenReceived() public {
+        bytes memory params =
+            hex"821A85223BDF585D871903F3061903F34A006F05B59D3B2000000058458281861903E8D82A5828000181E2039220207DCAE81B2A679A3955CC2E4B3504C23CE55B2DB5DD2119841ECAFA550E53900E1908001A0007E9001A005033401A0002D3028040187B";
+        vm.prank(datacapContract);
+        vm.expectRevert(abi.encodeWithSelector(Client.InvalidTokenReceived.selector));
+        client.handle_filecoin_method(3726118371, 81, params);
+    }
+
+    function testHandleFilecoinMethodExpectRevertUnsupportedType() public {
+        bytes memory params =
+            hex"821A85223BDE585B861903F3061903F34A006F05B59D3B2000000058458281861903E8D82A5828000181E2039220207DCAE81B2A679A3955CC2E4B3504C23CE55B2DB5DD2119841ECAFA550E53900E1908001A0007E9001A005033401A0002D3028040";
+        vm.prank(datacapContract);
+        vm.expectRevert(abi.encodeWithSelector(Client.UnsupportedType.selector));
+        client.handle_filecoin_method(3726118371, 81, params);
+    }
+
+    function testHandleFilecoinMethodForDatacapContract() public {
+        bytes memory params =
+            hex"821A85223BDF58598607061903F34A006F05B59D3B2000000058458281861903E8D82A5828000181E2039220207DCAE81B2A679A3955CC2E4B3504C23CE55B2DB5DD2119841ECAFA550E53900E1908001A0007E9001A005033401A0002D3028040";
+        vm.prank(datacapContract);
+        (uint32 exitCode, uint64 codec, bytes memory data) = client.handle_filecoin_method(3726118371, 0x51, params);
+        assertEq(exitCode, 0);
+        assertEq(codec, 0);
+        assertEq(data, "");
+    }
+
+    function testHandleFilecoinMethodForVerifregContract() public {
+        bytes memory params =
+            hex"821A85223BDF58598606061903F34A006F05B59D3B2000000058458281861903E8D82A5828000181E2039220207DCAE81B2A679A3955CC2E4B3504C23CE55B2DB5DD2119841ECAFA550E53900E1908001A0007E9001A005033401A0002D3028040";
+        vm.prank(datacapContract);
+        (uint32 exitCode, uint64 codec, bytes memory data) = client.handle_filecoin_method(3726118371, 0x51, params);
+        assertEq(exitCode, 0);
+        assertEq(codec, 0);
+        assertEq(data, "");
+    }
+
+    function testTransferRevertInvalidAmount() public {
+        transferParams = DataCapTypes.TransferParams({
+            to: CommonTypes.FilAddress(transferTo),
+            amount: CommonTypes.BigInt({
+                val: hex"010000000000000000000000000000000000000000000000000000000000000000", neg: false
+            }),
+            operator_data: hex"8282861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A00503340190131861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
+        });
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.InvalidAmount.selector));
+        client.transfer(transferParams);
+    }
+
+    function testInvalidOperatorDataLength() public {
+        // operator_data == [[]]
+        transferParams.operator_data = hex"8180";
+
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.InvalidOperatorData.selector));
+        client.transfer(transferParams);
+    }
+
+    function testInvalidAllocationRequest() public {
+        // AllocationRequest length is 7 instead of 6
+        transferParams.operator_data =
+            hex"8282871904B0D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A00503340190131190131861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180";
+
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.InvalidAllocationRequest.selector));
+        client.transfer(transferParams);
+    }
+
+    function testSetBeneficiaryFactory() public {
+        BeneficiaryFactory newBeneficiaryFactory = new BeneficiaryFactory();
+        client.setBeneficiaryFactory(newBeneficiaryFactory);
+        assertEq(address(client.beneficiaryFactory()), address(newBeneficiaryFactory));
+    }
+
+    function testTransferRevertInsufficientAllowance() public {
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.InsufficientAllowance.selector));
+        client.transfer(transferParams);
+    }
+
+    function testClientCanCallTransfer() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testVerifregFailIsDetected() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.etch(CALL_ACTOR_ID, address(buildInActorForTransferFunctionMock).code);
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.TransferFailed.selector, 1));
+        client.transfer(transferParams);
+    }
+
+    function testCheckAllowanceAfterTransfer() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+        assertEq(client.allowances(clientAddress, SP2), 0);
     }
 }
