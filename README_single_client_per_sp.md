@@ -119,7 +119,7 @@ interface Beneficiary {
     
     receive();
     
-    function changeBeneficiary(CommonTypes.FilActorId minerId, CommonTypes.FilAddresses newBeneficiary, uint256 newQuota, int64 newExpirationChainEpoch) external onlyRole(ADMIN_ROLE);
+    function changeBeneficiary(CommonTypes.FilActorId minerId, CommonTypes.FilAddress calldata newBeneficiary, uint256 newQuota, int64 newExpirationChainEpoch) external onlyRole(ADMIN_ROLE);
 
     // administrative
     function setSLAAllocator(address new) external onlyRole(ADMIN_ROLE);
