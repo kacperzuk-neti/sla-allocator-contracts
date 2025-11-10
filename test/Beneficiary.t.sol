@@ -115,25 +115,25 @@ contract BeneficiaryTest is Test {
         assertTrue(beneficiary.getRoleAdmin(withdrawerRole) == managerRole);
     }
 
-    function testSetSlashRecipient() public {
-        beneficiary.setSlashRecipient(address(0x123));
-        assertEq(beneficiary.slashRecipient(), address(0x123));
+    function testSetBurnAddress() public {
+        beneficiary.setBurnAddress(address(0x123));
+        assertEq(beneficiary.burnAddress(), address(0x123));
     }
 
-    function testSetSlashRecipientEmitsEvent() public {
+    function testSetBurnAddressEmitsEvent() public {
         vm.expectEmit(true, true, true, true);
-        emit Beneficiary.SlashRecipientUpdated(address(0x123));
-        beneficiary.setSlashRecipient(address(0x123));
+        emit Beneficiary.BurnAddressUpdated(address(0x123));
+        beneficiary.setBurnAddress(address(0x123));
     }
 
-    function testSetSlashRecipientRevert() public {
+    function testSetBurnAddressRevert() public {
         address notAdmin = address(0x333);
         bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
         vm.prank(notAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
         );
-        beneficiary.setSlashRecipient(address(0x123));
+        beneficiary.setBurnAddress(address(0x123));
     }
 
     function testWithdrawForGreenBand() public {
