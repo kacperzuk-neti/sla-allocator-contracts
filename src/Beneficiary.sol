@@ -44,11 +44,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     address public burnAddress;
 
     /**
-     * @notice The client smart contract.
-     */
-    Client public clientSmartContract;
-
-    /**
      * @notice Emits a BurnAddressUpdated event.
      * @param burnAddress The address to set as the burn address.
      */
@@ -59,12 +54,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @param newSLAAllocator The SLA allocator to set.
      */
     event SLAAllocatorUpdated(SLAAllocator newSLAAllocator);
-
-    /**
-     * @notice Emits a ClientSmartContractUpdated event.
-     * @param newClientSmartContract The client smart contract to set.
-     */
-    event ClientSmartContractUpdated(Client newClientSmartContract);
 
     // solhint-disable gas-indexed-events
     /**
@@ -152,16 +141,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     function setSLAAllocator(SLAAllocator newSLAAllocator) public onlyRole(DEFAULT_ADMIN_ROLE) {
         slaAllocator = newSLAAllocator;
         emit SLAAllocatorUpdated(newSLAAllocator);
-    }
-
-    /**
-     * @notice Sets the client smart contract.
-     * @param newClientSmartContract The client smart contract to set.
-     * @dev Only the admin can set the client smart contract.
-     */
-    function setClientSmartContract(Client newClientSmartContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        clientSmartContract = newClientSmartContract;
-        emit ClientSmartContractUpdated(newClientSmartContract);
     }
 
     /**
