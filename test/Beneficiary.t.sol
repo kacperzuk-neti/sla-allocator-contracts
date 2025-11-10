@@ -21,6 +21,7 @@ import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLAAllocator} from "./contracts/MockSLAAllocator.sol";
 import {ActorAddressMock} from "./contracts/ActorAddressMock.sol";
 import {ActorIdMock} from "./contracts/ActorIdMock.sol";
+import {Client} from "../src/Client.sol";
 
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
@@ -95,25 +96,25 @@ contract BeneficiaryTest is Test {
         assertTrue(beneficiary.getRoleAdmin(withdrawerRole) == managerRole);
     }
 
-    function testSetSlashRecipient() public {
-        beneficiary.setSlashRecipient(address(0x123));
-        assertEq(beneficiary.slashRecipient(), address(0x123));
+    function testSetBurnAddress() public {
+        beneficiary.setBurnAddress(address(0x123));
+        assertEq(beneficiary.burnAddress(), address(0x123));
     }
 
-    function testSetSlashRecipientEmitsEvent() public {
+    function testSetBurnAddressEmitsEvent() public {
         vm.expectEmit(true, true, true, true);
-        emit Beneficiary.SlashRecipientUpdated(address(0x123));
-        beneficiary.setSlashRecipient(address(0x123));
+        emit Beneficiary.BurnAddressUpdated(address(0x123));
+        beneficiary.setBurnAddress(address(0x123));
     }
 
-    function testSetSlashRecipientRevert() public {
+    function testSetBurnAddressRevert() public {
         address notAdmin = address(0x333);
         bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
         vm.prank(notAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
         );
-        beneficiary.setSlashRecipient(address(0x123));
+        beneficiary.setBurnAddress(address(0x123));
     }
 
     function testWithdrawForGreenBand() public {
@@ -243,6 +244,51 @@ contract BeneficiaryTest is Test {
         );
     }
 
+    function testSetSLAAllocator() public {
+        SLAAllocator newSLAAllocator = SLAAllocator(address(0x123));
+        beneficiary.setSLAAllocator(newSLAAllocator);
+        assertEq(address(beneficiary.slaAllocator()), address(newSLAAllocator));
+    }
+
+    function testSetSLAAllocatorEmitsEvent() public {
+        SLAAllocator newSLAAllocator = SLAAllocator(address(0x123));
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.SLAAllocatorUpdated(newSLAAllocator);
+        beneficiary.setSLAAllocator(newSLAAllocator);
+    }
+
+    function testSetSLAAllocatorRevert() public {
+        address notAdmin = address(0x333);
+        bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
+        vm.prank(notAdmin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
+        );
+        beneficiary.setSLAAllocator(SLAAllocator(address(0x123)));
+    }
+
+    function testSetClientSmartContract() public {
+        Client newClientSmartContract = Client(address(0x123));
+        beneficiary.setClientSmartContract(newClientSmartContract);
+        assertEq(address(beneficiary.clientSmartContract()), address(newClientSmartContract));
+    }
+
+    function testSetClientSmartContractEmitsEvent() public {
+        Client newClientSmartContract = Client(address(0x123));
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.ClientSmartContractUpdated(newClientSmartContract);
+        beneficiary.setClientSmartContract(newClientSmartContract);
+    }
+
+    function testSetClientSmartContractRevert() public {
+        address notAdmin = address(0x333);
+        bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
+        vm.prank(notAdmin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
+        );
+        beneficiary.setClientSmartContract(Client(address(0x123)));
+    }
     // solhint-disable-next-line no-empty-blocks
     function testChangeBeneficiaryCalldata() public {
         // FIXME verify that miner is called correctly for changeBeneficiary

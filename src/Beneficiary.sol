@@ -10,7 +10,7 @@ import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
-
+import {Client} from "./Client.sol";
 /**
  * @title Beneficiary
  * @notice Upgradeable contract for managing beneficiaries with role-based access control
@@ -41,13 +41,30 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     /**
      * @notice The address to set as the slash recipient.
      */
-    address public slashRecipient;
+    address public burnAddress;
 
     /**
-     * @notice Emits a SlashRecipientUpdated event.
-     * @param slashRecipient The address to set as the slash recipient.
+     * @notice The client smart contract.
      */
-    event SlashRecipientUpdated(address indexed slashRecipient);
+    Client public clientSmartContract;
+
+    /**
+     * @notice Emits a BurnAddressUpdated event.
+     * @param burnAddress The address to set as the burn address.
+     */
+    event BurnAddressUpdated(address indexed burnAddress);
+
+    /**
+     * @notice Emits a SLAAllocatorUpdated event.
+     * @param newSLAAllocator The SLA allocator to set.
+     */
+    event SLAAllocatorUpdated(SLAAllocator newSLAAllocator);
+
+    /**
+     * @notice Emits a ClientSmartContractUpdated event.
+     * @param newClientSmartContract The client smart contract to set.
+     */
+    event ClientSmartContractUpdated(Client newClientSmartContract);
 
     // solhint-disable gas-indexed-events
     /**
@@ -114,12 +131,32 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
 
     /**
      * @notice Emits a SlashRecipientUpdated event.
-     * @param slashRecipient_ The address to set as the slash recipient.
-     * @dev Only the admin can set the slash recipient.
+     * @param burnAddress_ The address to set as the burn address.
+     * @dev Only the admin can set the burn address.
      */
-    function setSlashRecipient(address slashRecipient_) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        slashRecipient = slashRecipient_;
-        emit SlashRecipientUpdated(slashRecipient_);
+    function setBurnAddress(address burnAddress_) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        burnAddress = burnAddress_;
+        emit BurnAddressUpdated(burnAddress_);
+    }
+
+    /**
+     * @notice Sets the SLA allocator.
+     * @param newSLAAllocator The SLA allocator to set.
+     * @dev Only the admin can set the SLA allocator.
+     */
+    function setSLAAllocator(SLAAllocator newSLAAllocator) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        slaAllocator = newSLAAllocator;
+        emit SLAAllocatorUpdated(newSLAAllocator);
+    }
+
+    /**
+     * @notice Sets the client smart contract.
+     * @param newClientSmartContract The client smart contract to set.
+     * @dev Only the admin can set the client smart contract.
+     */
+    function setClientSmartContract(Client newClientSmartContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        clientSmartContract = newClientSmartContract;
+        emit ClientSmartContractUpdated(newClientSmartContract);
     }
 
     /**
