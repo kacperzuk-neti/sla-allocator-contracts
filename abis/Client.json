@@ -32,13 +32,13 @@
   },
   {
     "type": "function",
-    "name": "TOKEN_PRECISION",
+    "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
