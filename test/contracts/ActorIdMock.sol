@@ -8,57 +8,73 @@ contract ActorIdMock {
 
     receive() external payable {}
 
-    // solhint-disable-next-line no-complex-fallback
-    fallback(bytes calldata data) external payable returns (bytes memory) {
-        (uint256 methodNum,,,,, uint64 target) = abi.decode(data, (uint64, uint256, uint64, uint64, bytes, uint64));
-        if (methodNum == 4158972569 && target == 10000) {
+    function handleGetBeneficiary(uint64 target) internal returns (bytes memory) {
+        if (target == 10000) {
             return abi.encode(
                 0, 0x51, hex"82824400C2A101834E0002863C1F5CDAE42F95400000004000854400D4C1014207D01A006ACFC0F5F4"
             );
         }
-        if (methodNum == 4158972569 && target == 20000) {
+        if (target == 20000) {
             return abi.encode(
                 0, 0x51, hex"82824400C2A101834E0002863C1F5CDAE42F9540000000401A005B8D80854400D4C1014207D01A006ACFC0F5F4"
             );
         }
-        if (methodNum == 4158972569 && target == 30000) {
+        if (target == 30000) {
             return abi.encode(0, 0x51, hex"82824400C2A101834203E8410A1A005B8D80854400D4C1014207D01A006ACFC0F5F4");
         }
-        if (methodNum == 4158972569 && target == 40000) {
+        if (target == 40000) {
             return abi.encode(0, 0x51, hex"82824083404000F6");
         }
-        if (methodNum == 4158972569 && target == 50000) {
+        if (target == 50000) {
             return abi.encode(0, 0x51, hex"82824400C2A101834201FF410A1A005B8D80854400D4C1014207D01A006ACFC0F5F4");
         }
-        if (methodNum == 4158972569 && target == 60000) {
+        if (target == 60000) {
             return abi.encode(
                 0,
                 0x51,
                 hex"82824400C2A101834E0002863C1F5CDAE42F95400000004D00A18F07D736B90BE5500000001A005B8D80854400D4C1014207D01A006ACFC0F5F4"
             );
         }
-        if (methodNum == 4158972569 && target == 70000) {
+        if (target == 70000) {
             return
                 abi.encode(0, 0x51, hex"82824300FE07834E0002863C1F5CDAE42F95400000004A0007DAB13E6B1EE374501A000F3E58F6");
         }
-        if (methodNum == 4158972569 && target == 12345) {
+        if (target == 12345) {
             // Simulate error exit code
             return abi.encode(1, 0x51, hex"82824083404000F6");
         }
-        if (methodNum == 1570634796 && target == 12345) {
+    }
+
+    function handleChangeBeneficiary(uint64 target) internal returns (bytes memory) {
+        if (target == 12345) {
             // Simulate error inside MienerAPI.changeBeneficiary
             return abi.encode(0, 0x51, hex"00");
         }
-        if (methodNum == 1570634796 && target == 10000) {
+        if (target == 10000) {
             // Simulate error exit code
             return abi.encode(1, 0x00, "");
         }
-        if (methodNum == 1570634796 && target == 20000) {
+        if (target == 20000) {
             return abi.encode(0, 0x00, "");
         }
+    }
+
+    function handleAddVerifiedClient() internal pure returns (bytes memory) {
+        // Success send
+        return abi.encode(0, 0x00, "");
+    }
+
+    // solhint-disable-next-line no-complex-fallback
+    fallback(bytes calldata data) external payable returns (bytes memory) {
+        (uint256 methodNum,,,,, uint64 target) = abi.decode(data, (uint64, uint256, uint64, uint64, bytes, uint64));
+        if (methodNum == 4158972569) {
+            return handleGetBeneficiary(target);
+        }
+        if (methodNum == 1570634796) {
+            return handleChangeBeneficiary(target);
+        }
         if (methodNum == 3916220144) {
-            // Success send
-            return abi.encode(0, 0x00, "");
+            return handleAddVerifiedClient();
         }
 
         revert MethodNotFound();
