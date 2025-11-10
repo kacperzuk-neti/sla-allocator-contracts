@@ -97,6 +97,19 @@
   },
   {
     "type": "function",
+    "name": "clientSmartContract",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract Client"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -243,9 +256,35 @@
     "name": "setBurnAddress",
     "inputs": [
       {
-        "name": "newBurnAddress",
+        "name": "burnAddress_",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setClientSmartContract",
+    "inputs": [
+      {
+        "name": "newClientSmartContract",
+        "type": "address",
+        "internalType": "contract Client"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setSLAAllocator",
+    "inputs": [
+      {
+        "name": "newSLAAllocator",
+        "type": "address",
+        "internalType": "contract SLAAllocator"
       }
     ],
     "outputs": [],
@@ -356,6 +395,19 @@
   },
   {
     "type": "event",
+    "name": "ClientSmartContractUpdated",
+    "inputs": [
+      {
+        "name": "newClientSmartContract",
+        "type": "address",
+        "indexed": false,
+        "internalType": "contract Client"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -438,6 +490,19 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SLAAllocatorUpdated",
+    "inputs": [
+      {
+        "name": "newSLAAllocator",
+        "type": "address",
+        "indexed": false,
+        "internalType": "contract SLAAllocator"
       }
     ],
     "anonymous": false
