@@ -10,7 +10,7 @@ import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
 
-import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
+import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 import {Client} from "./Client.sol";
 import {SLARegistry} from "./SLARegistry.sol";
