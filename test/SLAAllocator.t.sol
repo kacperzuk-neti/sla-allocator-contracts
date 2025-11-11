@@ -11,7 +11,7 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 
 import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
 import {Client} from "../src/Client.sol";
-import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
+import {MinerUtils} from "../src/libs/MinerUtils.sol";
 import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {SLARegistry} from "../src/SLAAllocator.sol";
 
@@ -78,19 +78,19 @@ contract SLAAllocatorTest is Test {
 
     function testRequestDataCapExpirationBelowFiveYearsRevert() public {
         slas[0].provider = SP1;
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExpirationBelowFiveYears.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.ExpirationBelowFiveYears.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
     function testRequestDataCapNoBeneficiarySetRevert() public {
         slas[0].provider = SP4;
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.NoBeneficiarySet.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.NoBeneficiarySet.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
     function testRequestDataCapQuotaCannotBeNegativeRevert() public {
         slas[0].provider = SP5;
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaCannotBeNegative.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.QuotaCannotBeNegative.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
@@ -101,13 +101,13 @@ contract SLAAllocatorTest is Test {
 
     function testGetBeneficiaryExpectRevertExitCodeError() public {
         slas[0].provider = CommonTypes.FilActorId.wrap(uint64(12345));
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.ExitCodeError.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.ExitCodeError.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
     function testRequestDataCapQuotaNotUnlimitedRevert() public {
         slas[0].provider = SP6;
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.QuotaNotUnlimited.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.QuotaNotUnlimited.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
