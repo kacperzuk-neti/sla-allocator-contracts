@@ -1,6 +1,11 @@
 [
   {
     "type": "error",
+    "name": "BeneficiaryInstanceNonexistent",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ExitCodeError",
     "inputs": []
   },
@@ -8,6 +13,27 @@
     "type": "error",
     "name": "ExpirationBelowFiveYears",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedToGetActorID",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidBeneficiary",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expectedBeneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
   },
   {
     "type": "error",

@@ -21,12 +21,19 @@ import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLAAllocator} from "./contracts/MockSLAAllocator.sol";
 import {ActorAddressMock} from "./contracts/ActorAddressMock.sol";
 import {ActorIdMock} from "./contracts/ActorIdMock.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
+import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
+import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
 
+// solhint-disable-next-line max-states-count
 contract BeneficiaryTest is Test {
     Beneficiary public beneficiary;
     ActorIdMock public actorIdMock;
     ActorAddressMock public actorAddressMock;
-
+    MockBeneficiaryFactory public mockBeneficiaryFactory;
+    ResolveAddressPrecompileMock public resolveAddress =
+        ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
+    ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
     CommonTypes.FilActorId public provider = CommonTypes.FilActorId.wrap(0x999);
     SLAAllocator public slaAllocator;
     address public manager = vm.addr(1);
@@ -37,11 +44,17 @@ contract BeneficiaryTest is Test {
     CommonTypes.FilActorId public SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
     CommonTypes.FilActorId public SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
     CommonTypes.FilActorId public SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
-    CommonTypes.FilActorId public SP4 = CommonTypes.FilActorId.wrap(uint64(70000));
+    CommonTypes.FilActorId public SP7 = CommonTypes.FilActorId.wrap(uint64(70000));
+    CommonTypes.FilActorId public beneficiaryContractId = CommonTypes.FilActorId.wrap(uint64(1022));
 
     CommonTypes.FilAddress public SP1Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP1));
     CommonTypes.FilAddress public SP2Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP2));
     CommonTypes.FilAddress public SP3Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP3));
+    CommonTypes.FilAddress public SP7Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP7));
+    CommonTypes.FilAddress public beneficiaryContractAddress =
+        FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(beneficiaryContractId));
+    address public beneficiaryEthAddressContract;
+
     // solhint-enable var-name-mixedcase
 
     function setUp() public {
@@ -49,13 +62,16 @@ contract BeneficiaryTest is Test {
         actorAddressMock = new ActorAddressMock();
         address actorIdProxy = address(new MockProxy(address(5555)));
         address actorAddressProxy = address(new MockProxy(address(6666)));
-
+        mockBeneficiaryFactory = new MockBeneficiaryFactory();
+        resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
         slaAllocator = SLAAllocator(address(new MockSLAAllocator()));
 
         vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
         vm.etch(CALL_ACTOR_ADDRESS, address(actorAddressProxy).code);
         vm.etch(address(5555), address(actorIdMock).code);
         vm.etch(address(6666), address(actorAddressMock).code);
+        vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
+        resolveAddress.setId(uint64(1022));
 
         beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator);
     }
@@ -67,6 +83,7 @@ contract BeneficiaryTest is Test {
         SLAAllocator slaAllocator_
     ) public returns (Beneficiary) {
         Beneficiary impl = new Beneficiary();
+
         // solhint-disable gas-small-strings
         bytes memory initData = abi.encodeCall(Beneficiary.initialize, (admin_, withdrawer_, provider_, slaAllocator_));
         // solhint-enable gas-small-strings
@@ -215,8 +232,10 @@ contract BeneficiaryTest is Test {
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
     }
 
-    function testGetBeneficiaryWithChecksForSP4() public view {
-        GetBeneficiary.getBeneficiaryWithChecks(SP4, true, true, false);
+    function testGetBeneficiaryWithChecksForSP7() public {
+        beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(1022);
+        mockBeneficiaryFactory.setInstance(SP7, beneficiaryEthAddressContract);
+        GetBeneficiary.getBeneficiaryWithChecks(SP7, mockBeneficiaryFactory, true, true, false);
     }
 
     function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {

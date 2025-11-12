@@ -32,6 +32,19 @@
   },
   {
     "type": "function",
+    "name": "TOKEN_PRECISION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "UPGRADE_INTERFACE_VERSION",
     "inputs": [],
     "outputs": [
@@ -63,6 +76,19 @@
         "name": "amount",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "beneficiaryFactory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract BeneficiaryFactory"
       }
     ],
     "stateMutability": "view"
@@ -129,6 +155,45 @@
   },
   {
     "type": "function",
+    "name": "handle_filecoin_method",
+    "inputs": [
+      {
+        "name": "method",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "inputCodec",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "params",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "exitCode",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "codec",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -187,6 +252,11 @@
         "name": "allocator",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "beneficiaryFactory_",
+        "type": "address",
+        "internalType": "contract BeneficiaryFactory"
       }
     ],
     "outputs": [],
@@ -243,6 +313,19 @@
   },
   {
     "type": "function",
+    "name": "setBeneficiaryFactory",
+    "inputs": [
+      {
+        "name": "newBeneficiaryFactory",
+        "type": "address",
+        "internalType": "contract BeneficiaryFactory"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -259,6 +342,55 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "transfer",
+    "inputs": [
+      {
+        "name": "params",
+        "type": "tuple",
+        "internalType": "struct DataCapTypes.TransferParams",
+        "components": [
+          {
+            "name": "to",
+            "type": "tuple",
+            "internalType": "struct CommonTypes.FilAddress",
+            "components": [
+              {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "amount",
+            "type": "tuple",
+            "internalType": "struct CommonTypes.BigInt",
+            "components": [
+              {
+                "name": "val",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "neg",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          },
+          {
+            "name": "operator_data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -302,6 +434,25 @@
       },
       {
         "name": "allowanceAfter",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DatacapSpent",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -433,6 +584,11 @@
   },
   {
     "type": "error",
+    "name": "ActorNotFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AddressEmptyCode",
     "inputs": [
       {
@@ -454,6 +610,11 @@
   },
   {
     "type": "error",
+    "name": "BeneficiaryInstanceNonexistent",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ERC1967InvalidImplementation",
     "inputs": [
       {
@@ -470,8 +631,139 @@
   },
   {
     "type": "error",
+    "name": "ExitCodeError",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ExpirationBelowFiveYears",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FailedCall",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedToGetActorID",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "GetClaimsCallFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientAllowance",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidActorID",
+    "inputs": [
+      {
+        "name": "actorId",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAllocationRequest",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidBeneficiary",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "expectedBeneficiary",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidBeneficiary",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expectedBeneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidCaller",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "expectedCaller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidClaimExtensionRequest",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCodec",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidCodec",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
   },
   {
     "type": "error",
@@ -480,8 +772,81 @@
   },
   {
     "type": "error",
+    "name": "InvalidOperatorData",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidResponseLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTokenReceived",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MethodNotHandled",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NegativeValueNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoBeneficiarySet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotEnoughBalance",
+    "inputs": [
+      {
+        "name": "balance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "NotInitializing",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaCannotBeNegative",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaNotUnlimited",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TransferFailed",
+    "inputs": [
+      {
+        "name": "exitCode",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -498,5 +863,10 @@
         "internalType": "bytes32"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnsupportedType",
+    "inputs": []
   }
 ]

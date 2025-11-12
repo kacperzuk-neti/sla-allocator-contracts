@@ -3,10 +3,17 @@
 
 pragma solidity 0.8.25;
 
+// solhint-disable-next-line max-states-count
 contract ActorIdMock {
+    bytes internal _getClaimsResult;
+
     error MethodNotFound();
 
     receive() external payable {}
+
+    function setGetClaimsResult(bytes memory d) public {
+        _getClaimsResult = d;
+    }
 
     function handleGetBeneficiary(uint64 target) internal returns (bytes memory) {
         if (target == 10000) {
@@ -76,7 +83,14 @@ contract ActorIdMock {
         if (methodNum == 3916220144) {
             return handleAddVerifiedClient();
         }
-
+        if (target == 6 && methodNum == 2199871187) {
+            // verifreg get claims
+            return abi.encode(0, 0x51, _getClaimsResult);
+        }
+        if (target == 7 && methodNum == 80475954) {
+            // datacap transfer
+            return abi.encode(0, 0x51, hex"83410041004100");
+        }
         revert MethodNotFound();
     }
 }
