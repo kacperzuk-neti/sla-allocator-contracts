@@ -49,6 +49,19 @@
   },
   {
     "type": "function",
+    "name": "burnAddress",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "changeBeneficiary",
     "inputs": [
       {
@@ -166,6 +179,11 @@
         "name": "slaAllocator_",
         "type": "address",
         "internalType": "contract SLAAllocator"
+      },
+      {
+        "name": "burnAddress_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -222,10 +240,10 @@
   },
   {
     "type": "function",
-    "name": "setSlashRecipient",
+    "name": "setBurnAddress",
     "inputs": [
       {
-        "name": "slashRecipient_",
+        "name": "newBurnAddress",
         "type": "address",
         "internalType": "address"
       }
@@ -242,19 +260,6 @@
         "name": "",
         "type": "address",
         "internalType": "contract SLAAllocator"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "slashRecipient",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -332,6 +337,19 @@
         "type": "int64",
         "indexed": false,
         "internalType": "int64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BurnAddressUpdated",
+    "inputs": [
+      {
+        "name": "burnAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -417,19 +435,6 @@
       },
       {
         "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "SlashRecipientUpdated",
-    "inputs": [
-      {
-        "name": "slashRecipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"

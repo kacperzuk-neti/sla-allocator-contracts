@@ -75,7 +75,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param admin Contract owner
      * @param oracle_ SLIOracle
      */
-    function initialize(address admin, SLIOracle oracle_) public initializer {
+    function initialize(address admin, SLIOracle oracle_) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -89,7 +89,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param provider The provider address
      * @param slaParams The SLA deal parameters
      */
-    function registerSLA(address client, CommonTypes.FilActorId provider, SLAParams memory slaParams) public {
+    function registerSLA(address client, CommonTypes.FilActorId provider, SLAParams memory slaParams) external {
         _checkSLARegistered(client, provider);
         slaParams.registered = true;
         slas[client][provider] = slaParams;
@@ -102,7 +102,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param provider The provider address
      * @dev Will revert if a SLA is already registered for the given client and provider
      */
-    function _checkSLARegistered(address client, CommonTypes.FilActorId provider) private view {
+    function _checkSLARegistered(address client, CommonTypes.FilActorId provider) internal view {
         if (slas[client][provider].registered) {
             revert SLAAlreadyRegistered(client, provider);
         }
@@ -125,7 +125,7 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param provider The ID of the provider.
      * @return The score for SLA.
      */
-    function score(address client, CommonTypes.FilActorId provider) public view returns (uint256) {
+    function score(address client, CommonTypes.FilActorId provider) external view returns (uint256) {
         SLAParams storage sla = slas[client][provider];
 
         if (!sla.registered) revert SLAUnknown(client, provider);

@@ -58,7 +58,7 @@ contract SLIOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable, 
      * @param admin Contract owner
      * @param oracle Address that will get ORACLE_ROLE
      */
-    function initialize(address admin, address oracle) public initializer {
+    function initialize(address admin, address oracle) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __Multicall_init();

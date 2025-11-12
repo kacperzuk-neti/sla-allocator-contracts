@@ -17,6 +17,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant ALLOCATOR_ROLE = keccak256("ALLOCATOR_ROLE");
 
     /**
+     * @notice Upgradable role which allows for contract upgrades
+     */
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /**
      * @notice Mapping of allowances for clients and providers using FilActorId
      */
     mapping(address client => mapping(CommonTypes.FilActorId provider => uint256 amount)) public allowances;
@@ -54,10 +59,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @param admin Contract owner
      * @param allocator Address of the allocator contract that can increase and decrease allowances
      */
-    function initialize(address admin, address allocator) public initializer {
+    function initialize(address admin, address allocator) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(UPGRADER_ROLE, admin);
         _grantRole(ALLOCATOR_ROLE, allocator);
     }
 
@@ -105,8 +111,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     // solhint-disable no-empty-blocks
     /**
      * @notice Internal function used to implement new logic and check if upgrade is authorized
-     * @dev Will revert (reject upgrade) if upgrade isn't called by DEFAULT_ADMIN_ROLE
+     * @dev Will revert (reject upgrade) if upgrade isn't called by UPGRADER_ROLE
      * @param newImplementation Address of new implementation
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 }

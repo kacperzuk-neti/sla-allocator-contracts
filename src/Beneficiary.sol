@@ -39,15 +39,15 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     SLAAllocator public slaAllocator;
 
     /**
-     * @notice The address to set as the slash recipient.
+     * @notice The address to set as the burn address.
      */
-    address public slashRecipient;
+    address public burnAddress;
 
     /**
-     * @notice Emits a SlashRecipientUpdated event.
-     * @param slashRecipient The address to set as the slash recipient.
+     * @notice Emits a BurnAddressUpdated event.
+     * @param burnAddress The address to set as the burn address.
      */
-    event SlashRecipientUpdated(address indexed slashRecipient);
+    event BurnAddressUpdated(address indexed burnAddress);
 
     // solhint-disable gas-indexed-events
     /**
@@ -97,11 +97,15 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @param manager Address of the contract manager
      * @param provider_ Address of the storage provider
      * @param slaAllocator_ Address of the SLA registry contract
+     * @param burnAddress_ Address of the burn address
      */
-    function initialize(address admin, address manager, CommonTypes.FilActorId provider_, SLAAllocator slaAllocator_)
-        public
-        initializer
-    {
+    function initialize(
+        address admin,
+        address manager,
+        CommonTypes.FilActorId provider_,
+        SLAAllocator slaAllocator_,
+        address burnAddress_
+    ) external initializer {
         __AccessControl_init();
         _setRoleAdmin(WITHDRAWER_ROLE, MANAGER_ROLE);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -110,16 +114,17 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
 
         provider = provider_;
         slaAllocator = slaAllocator_;
+        burnAddress = burnAddress_;
     }
 
     /**
-     * @notice Emits a SlashRecipientUpdated event.
-     * @param slashRecipient_ The address to set as the slash recipient.
+     * @notice Emits a BurnAddressUpdated event.
+     * @param newBurnAddress The address to set as the burn address.
      * @dev Only the admin can set the slash recipient.
      */
-    function setSlashRecipient(address slashRecipient_) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        slashRecipient = slashRecipient_;
-        emit SlashRecipientUpdated(slashRecipient_);
+    function setBurnAddress(address newBurnAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        burnAddress = newBurnAddress;
+        emit BurnAddressUpdated(newBurnAddress);
     }
 
     /**
@@ -128,7 +133,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      *      Reverts with WithdrawalFailed if the SendAPI.send method returns a non-zero exit code.
      * @param recipient The FilAddress to withdraw the balance to.
      */
-    function withdraw(CommonTypes.FilAddress memory recipient) public onlyRole(WITHDRAWER_ROLE) {
+    function withdraw(CommonTypes.FilAddress calldata recipient) external onlyRole(WITHDRAWER_ROLE) {
         uint256 amount = address(this).balance;
         address client = slaAllocator.providerClients(provider);
         SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(client, provider));
