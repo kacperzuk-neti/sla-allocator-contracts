@@ -34,7 +34,9 @@ contract BeneficiaryFactoryTest is Test {
         beneficiaryImpl = address(new Beneficiary());
 
         factoryImpl = new BeneficiaryFactory();
-        initData = abi.encodeCall(BeneficiaryFactory.initialize, (admin, beneficiaryImpl, SLAAllocator(slaAllocator)));
+        initData = abi.encodeCall(
+            BeneficiaryFactory.initialize, (admin, beneficiaryImpl, SLAAllocator(slaAllocator), burnAddress)
+        );
         factory = BeneficiaryFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
     }
 
@@ -50,26 +52,26 @@ contract BeneficiaryFactoryTest is Test {
         address expectedProxy = computeProxyAddress(admin, withdrawer, provider, factory.nonce(admin, provider) + 1);
         emit BeneficiaryFactory.ProxyCreated(expectedProxy, provider);
 
-        factory.create(admin, withdrawer, provider, burnAddress);
+        factory.create(admin, withdrawer, provider);
     }
 
     function testDeployMarksProxyAsDeployed() public {
         address expectedProxy = computeProxyAddress(admin, withdrawer, provider, factory.nonce(admin, provider) + 1);
-        factory.create(admin, withdrawer, provider, burnAddress);
+        factory.create(admin, withdrawer, provider);
 
         assertTrue(factory.instances(provider) == expectedProxy);
     }
 
     function testDeployIncrementsNonce() public {
-        factory.create(admin, withdrawer, provider, burnAddress);
+        factory.create(admin, withdrawer, provider);
         assertEq(factory.nonce(admin, provider), 1);
     }
 
     function testDeployRevertsIfInstanceExists() public {
-        factory.create(admin, withdrawer, provider, burnAddress);
+        factory.create(admin, withdrawer, provider);
 
         vm.expectRevert(abi.encodeWithSelector(BeneficiaryFactory.InstanceAlreadyExists.selector));
-        factory.create(admin, withdrawer, provider, burnAddress);
+        factory.create(admin, withdrawer, provider);
     }
 
     function computeProxyAddress(address admin_, address withdrawer_, CommonTypes.FilActorId provider_, uint256 nonce)
