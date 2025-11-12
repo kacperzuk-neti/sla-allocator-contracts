@@ -32,11 +32,16 @@ function deployBeneficiaryFactory() {
     exit 1
   fi
 
+  if [ -z "$2" ]; then
+    echo "deployBeneficiaryFactory needs burn address" >&2
+    exit 1
+  fi
+
   beneficiaryImpl=$(_deploy Beneficiary)
   ((nonce += 1))
   impl=$(_deploy BeneficiaryFactory)
   ((nonce += 1))
-  calldata=$(cast calldata 'initialize(address,address,address)' "$ADMIN" "$beneficiaryImpl" "$1")
+  calldata=$(cast calldata 'initialize(address,address,address,address)' "$ADMIN" "$beneficiaryImpl" "$1" "$2")
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 
@@ -76,7 +81,7 @@ slaAllocator=$(deploySLAAllocator)
 client=$(deployClient "$slaAllocator")
 ((nonce += 2))
 
-beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator")
+beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator" "$BURN_ADDRESS")
 ((nonce += 3))
 
 sliOracle=$(deployOracle)
