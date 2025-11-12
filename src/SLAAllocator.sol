@@ -212,4 +212,19 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     function getProviders() external view returns (CommonTypes.FilActorId[] memory) {
         return providers;
     }
+
+    /**
+     * @notice Register provider as known to the system
+     * @param provider Id of the provider
+     */
+    function addProvider(CommonTypes.FilActorId provider) external onlyRole(MANAGER_ROLE) {
+        uint64 providerInt = CommonTypes.FilActorId.unwrap(provider);
+        for (uint256 i = 0; i < providers.length; i++) {
+            if (CommonTypes.FilActorId.unwrap(providers[i]) == providerInt) {
+                // already in the list, nothing to do
+                return;
+            }
+        }
+        providers.push(provider);
+    }
 }

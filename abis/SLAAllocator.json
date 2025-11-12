@@ -58,6 +58,19 @@
   },
   {
     "type": "function",
+    "name": "addProvider",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "beneficiaryFactory",
     "inputs": [],
     "outputs": [
