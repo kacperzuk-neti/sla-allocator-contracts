@@ -58,6 +58,19 @@
   },
   {
     "type": "function",
+    "name": "burnAddress",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "create",
     "inputs": [
       {
@@ -74,11 +87,6 @@
         "name": "provider",
         "type": "uint64",
         "internalType": "CommonTypes.FilActorId"
-      },
-      {
-        "name": "burnAddress",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -163,6 +171,11 @@
         "name": "slaAllocator_",
         "type": "address",
         "internalType": "contract SLAAllocator"
+      },
+      {
+        "name": "burnAddress_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],

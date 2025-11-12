@@ -42,6 +42,11 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
     SLAAllocator public slaAllocator;
 
     /**
+     * @notice Address of the Burn Address
+     */
+    address public burnAddress;
+
+    /**
      * @notice Emitted when a new proxy is successfully created
      * @param proxy The address of the newly deployed proxy
      * @param provider The provider for which the proxy was created
@@ -62,14 +67,19 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param admin The address to be set as the owner of the beacon (has upgrade permissions) and admin of the Factory itself
      * @param implementation The address of the initial Beneficiary implementation for the beacon
      * @param slaAllocator_ The address of the SLAAllocator
+     * @param burnAddress_ The address of the burn address
      */
-    function initialize(address admin, address implementation, SLAAllocator slaAllocator_) external initializer {
+    function initialize(address admin, address implementation, SLAAllocator slaAllocator_, address burnAddress_)
+        external
+        initializer
+    {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
         beacon = address(new UpgradeableBeacon(implementation, admin));
         slaAllocator = slaAllocator_;
+        burnAddress = burnAddress_;
     }
 
     /**
@@ -79,9 +89,8 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param admin The address of the admin responsible for the contract.
      * @param withdrawer The address of the withdrawer responsible for the contract.
      * @param provider The ID of the provider responsible for the contract.
-     * @param burnAddress Address of the burn address
      */
-    function create(address admin, address withdrawer, CommonTypes.FilActorId provider, address burnAddress) external {
+    function create(address admin, address withdrawer, CommonTypes.FilActorId provider) external {
         if (instances[provider] != address(0)) {
             revert InstanceAlreadyExists();
         }

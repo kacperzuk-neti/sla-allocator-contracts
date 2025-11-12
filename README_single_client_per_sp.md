@@ -159,7 +159,7 @@ interface FIDLSLARegistry is SLARegistryInterface {
     function initialize(address admin, SLIOracle oracle) external;
 
     // callable by the client or miner owner
-    registerSLA(address client, FilActorId provider, SLAParams memory slaParams) external {
+    function registerSLA(address client, FilActorId provider, SLAParams memory slaParams) external;
 }
 ```
 
@@ -167,10 +167,10 @@ interface FIDLSLARegistry is SLARegistryInterface {
 
 **Oracle** is a contract that provides information about off-chain world. Details of logic and interface is between **Oracle** and **SLARegistry** - there are no requirements from SLA Allocator system.
 
-**SLIOracle** is a reference **Oracle** provided by FIDL that uses data from DataCapStats for SLIs. It will be upgradeable and implement a following interface:
+**FIDLOracle** is a reference **Oracle** provided by FIDL that uses data from DataCapStats for SLIs. It will be upgradeable and implement a following interface:
 
 ```
-interface SLIOracle {
+interface FIDLOracle {
     struct SLIAttestation {
         uint256 lastUpdate;
         uint16 availability;
