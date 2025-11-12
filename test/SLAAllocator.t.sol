@@ -252,6 +252,9 @@ contract SLAAllocatorTest is Test {
     }
 
     function testGetProvidersReturnsAddedProviders() public {
+        resolveAddress.setId(uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
         slaAllocator.requestDataCap(slas, 1);
 

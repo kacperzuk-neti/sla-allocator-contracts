@@ -15,7 +15,7 @@ import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
 import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
-import {BuildInActorForTransferFunctionMock} from "./contracts/BuildInActorForTransferFunctionMock.sol";
+import {BuiltInActorForTransferFunctionMock} from "./contracts/BuiltInActorForTransferFunctionMock.sol";
 
 contract ClientTest is Test {
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
@@ -33,7 +33,7 @@ contract ClientTest is Test {
 
     MockBeneficiaryFactory public mockBeneficiaryFactory;
     ActorIdExitCodeErrorFailingMock public actorIdExitCodeErrorFailingMock;
-    BuildInActorForTransferFunctionMock public buildInActorForTransferFunctionMock;
+    BuiltInActorForTransferFunctionMock public builtInActorForTransferFunctionMock;
     ActorIdMock public actorIdMock;
     ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
     ResolveAddressPrecompileFailingMock public resolveAddressPrecompileFailingMock;
@@ -60,7 +60,7 @@ contract ClientTest is Test {
         actorIdExitCodeErrorFailingMock = new ActorIdExitCodeErrorFailingMock();
         resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
         resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
-        buildInActorForTransferFunctionMock = new BuildInActorForTransferFunctionMock();
+        builtInActorForTransferFunctionMock = new BuiltInActorForTransferFunctionMock();
 
         address actorIdProxy = address(new MockProxy(address(5555)));
         vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
@@ -274,7 +274,7 @@ contract ClientTest is Test {
     function testVerifregFailIsDetected() public {
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
-        vm.etch(CALL_ACTOR_ID, address(buildInActorForTransferFunctionMock).code);
+        vm.etch(CALL_ACTOR_ID, address(builtInActorForTransferFunctionMock).code);
         vm.prank(clientAddress);
         vm.expectRevert(abi.encodeWithSelector(Client.TransferFailed.selector, 1));
         client.transfer(transferParams);

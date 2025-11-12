@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.25;
 
-contract BuildInActorForTransferFunctionMock {
+contract BuiltInActorForTransferFunctionMock {
     error MethodNotFound();
 
     receive() external payable {}
