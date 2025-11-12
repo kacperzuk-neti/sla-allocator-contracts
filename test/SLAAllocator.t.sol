@@ -6,6 +6,7 @@ import {Test} from "lib/forge-std/src/Test.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 
@@ -200,5 +201,29 @@ contract SLAAllocatorTest is Test {
         uint64 got = uint64(CommonTypes.FilActorId.unwrap(providers[0]));
         uint64 expected = uint64(CommonTypes.FilActorId.unwrap(SP2));
         assertEq(got, expected);
+    }
+
+    function testAddProvider() public {
+        vm.startPrank(manager);
+        CommonTypes.FilActorId[] memory providers;
+
+        providers = slaAllocator.getProviders();
+        assertEq(providers.length, 0);
+
+        slaAllocator.addProvider(CommonTypes.FilActorId.wrap(1));
+        providers = slaAllocator.getProviders();
+        assertEq(providers.length, 1);
+
+        slaAllocator.addProvider(CommonTypes.FilActorId.wrap(1));
+        providers = slaAllocator.getProviders();
+        assertEq(providers.length, 1);
+
+        vm.stopPrank();
+        bytes32 expectedRole = slaAllocator.MANAGER_ROLE();
+        vm.prank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, expectedRole)
+        );
+        slaAllocator.addProvider(CommonTypes.FilActorId.wrap(2));
     }
 }
