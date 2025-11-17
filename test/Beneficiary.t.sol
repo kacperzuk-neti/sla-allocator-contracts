@@ -238,7 +238,7 @@ contract BeneficiaryTest is Test {
     function testGetBeneficiaryWithChecksForSP7() public {
         beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(1022);
         mockBeneficiaryFactory.setInstance(SP7, beneficiaryEthAddressContract);
-        GetBeneficiary.getBeneficiaryWithChecks(SP7, mockBeneficiaryFactory, true, true, false);
+        MinerUtils.getBeneficiaryWithChecks(SP7, mockBeneficiaryFactory, true, true, false);
     }
 
     function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {

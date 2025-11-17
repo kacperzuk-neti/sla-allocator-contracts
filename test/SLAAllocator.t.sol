@@ -93,7 +93,7 @@ contract SLAAllocatorTest is Test {
 
     function testRequestDataCapRevertBeneficiaryInstanceNonexistent() public {
         slas[0].provider = SP1;
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.BeneficiaryInstanceNonexistent.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.BeneficiaryInstanceNonexistent.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 
@@ -165,7 +165,7 @@ contract SLAAllocatorTest is Test {
         slas[0].provider = SP2;
         resolveAddress.setId(uint64(50000));
         beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.InvalidBeneficiary.selector, 50000, 20000));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.InvalidBeneficiary.selector, 50000, 20000));
         slaAllocator.requestDataCap(slas, 1);
     }
 
@@ -184,7 +184,7 @@ contract SLAAllocatorTest is Test {
         vm.etch(address(failingResolveAddress), address(resolveAddressPrecompileFailingMock).code);
         mockBeneficiaryFactory.setInstance(SP2, vm.addr(3));
         slas[0].provider = SP2;
-        vm.expectRevert(abi.encodeWithSelector(GetBeneficiary.FailedToGetActorID.selector));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.FailedToGetActorID.selector));
         slaAllocator.requestDataCap(slas, 1);
     }
 

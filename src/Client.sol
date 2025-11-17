@@ -12,7 +12,7 @@ import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
 import {CBORDecoder} from "filecoin-solidity/v0.8/utils/CborDecode.sol";
 import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {UtilsHandlers} from "filecoin-solidity/v0.8/utils/UtilsHandlers.sol";
-import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
+import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 
 /**
@@ -238,7 +238,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     function _verifyAndRegisterAllocations(ProviderAllocation[] memory allocations) internal {
         for (uint256 i = 0; i < allocations.length; i++) {
             ProviderAllocation memory alloc = allocations[i];
-            GetBeneficiary.getBeneficiaryWithChecks(alloc.provider, beneficiaryFactory, true, true, true);
+            MinerUtils.getBeneficiaryWithChecks(alloc.provider, beneficiaryFactory, true, true, true);
             uint256 size = alloc.size;
             if (allowances[msg.sender][alloc.provider] < size) {
                 revert InsufficientAllowance();
@@ -277,7 +277,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             // for each provider, find all claims for this provider
             uint256 claimCount = 0;
             CommonTypes.FilActorId provider = claimProviders[providerIdx];
-            GetBeneficiary.getBeneficiaryWithChecks(provider, beneficiaryFactory, true, true, true);
+            MinerUtils.getBeneficiaryWithChecks(provider, beneficiaryFactory, true, true, true);
             for (uint256 i = 0; i < claimExtensions.length; i++) {
                 ProviderClaim memory claim = claimExtensions[i];
                 if (CommonTypes.FilActorId.unwrap(claim.provider) == CommonTypes.FilActorId.unwrap(provider)) {
