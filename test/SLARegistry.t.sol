@@ -7,7 +7,15 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {SLARegistry} from "../src/SLARegistry.sol";
 import {SLIOracle} from "../src/SLIOracle.sol";
+import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLIOracle} from "./contracts/MockSLIOracle.sol";
+import {MinerUtils} from "../src/libs/MinerUtils.sol";
+import {ActorIdMock} from "./contracts/ActorIdMock.sol";
+import {ResolveAddressPrecompileMock} from "./contracts/ResolveAddressPrecompileMock.sol";
+import {ActorIdExitCodeErrorFailingMock} from "./contracts/ActorIdExitCodeErrorFailingMock.sol";
+import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
+import {ActorIdUnauthorizedCallerFailingMock} from "./contracts/ActorIdUnauthorizedCallerFailingMock.sol";
 
 contract SLARegistryTest is Test {
     SLARegistry public slaRegistry;
@@ -15,6 +23,16 @@ contract SLARegistryTest is Test {
     CommonTypes.FilActorId public provider;
     SLARegistry.SLAParams public slaParams;
     MockSLIOracle public oracle;
+
+    ActorIdMock public actorIdMock;
+    ResolveAddressPrecompileFailingMock public resolveAddressPrecompileFailingMock;
+    ResolveAddressPrecompileMock public resolveAddress =
+        ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
+    ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
+    address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
+    address public constant CALL_ACTOR_ADDRESS = 0xfe00000000000000000000000000000000000003;
+    ActorIdExitCodeErrorFailingMock public actorIdExitCodeErrorFailingMock;
+    ActorIdUnauthorizedCallerFailingMock public actorIdUnauthorizedCallerFailingMock;
 
     function setUp() public {
         SLARegistry impl = new SLARegistry();
@@ -27,6 +45,17 @@ contract SLARegistryTest is Test {
         slaParams = SLARegistry.SLAParams({
             availability: 99, latency: 99, indexing: 99, retention: 99, bandwidth: 99, stability: 99, registered: false
         });
+
+        actorIdMock = new ActorIdMock();
+        actorIdExitCodeErrorFailingMock = new ActorIdExitCodeErrorFailingMock();
+        resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
+        resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
+        actorIdUnauthorizedCallerFailingMock = new ActorIdUnauthorizedCallerFailingMock();
+
+        address actorIdProxy = address(new MockProxy(address(5555)));
+        vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
+        vm.etch(address(5555), address(actorIdMock).code);
+        vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
     }
 
     function testIsAdminSet() public view {
@@ -47,7 +76,7 @@ contract SLARegistryTest is Test {
     }
 
     function testRegisterSLA() public {
-        vm.prank(address(this));
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
 
         (
@@ -70,9 +99,10 @@ contract SLARegistryTest is Test {
     }
 
     function testRegisterSLARevert() public {
-        vm.prank(address(this));
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
 
+        vm.prank(client);
         vm.expectRevert(abi.encodeWithSelector(SLARegistry.SLAAlreadyRegistered.selector, client, provider));
         slaRegistry.registerSLA(client, provider, slaParams);
     }
@@ -80,28 +110,58 @@ contract SLARegistryTest is Test {
     function testSLARegisteredEventEmitted() public {
         vm.expectEmit(true, true, true, true);
         emit SLARegistry.SLARegistered(client, provider);
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
     }
 
     function testScoreRevertsForUnknown() public {
         vm.expectRevert(abi.encodeWithSelector(SLARegistry.SLAUnknown.selector, client, provider));
         slaRegistry.score(client, provider);
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
     }
 
     function testScoreDoesntRevertForKnown() public {
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
         slaRegistry.score(client, provider);
     }
 
     function testScoreIsZeroForNoSLI() public {
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
         assertEq(slaRegistry.score(client, provider), 0);
     }
 
     function testScoreIsNonZeroForSLI() public {
+        vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
         oracle.setLastUpdate(123);
         assertFalse(slaRegistry.score(client, provider) == 0);
+    }
+
+    function testSLARegistryExpectRevertExitCodeError() public {
+        vm.etch(address(5555), address(actorIdExitCodeErrorFailingMock).code);
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.ExitCodeError.selector));
+        slaRegistry.registerSLA(client, provider, slaParams);
+    }
+
+    function testSLARegistryExpectRevertUnauthorizedCaller() public {
+        resolveAddress.setId(CommonTypes.FilActorId.unwrap(provider));
+        vm.etch(address(5555), address(actorIdUnauthorizedCallerFailingMock).code);
+        vm.expectRevert(abi.encodeWithSelector(SLARegistry.UnauthorizedCaller.selector));
+        slaRegistry.registerSLA(client, provider, slaParams);
+    }
+
+    function testSLARegistryProvider() public {
+        resolveAddress.setId(CommonTypes.FilActorId.unwrap(provider));
+        address evmProviderAddress = FilAddressIdConverter.toAddress(CommonTypes.FilActorId.unwrap(provider));
+        vm.prank(evmProviderAddress);
+        slaRegistry.registerSLA(client, provider, slaParams);
+    }
+
+    function testSLARegistryClient() public {
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, slaParams);
     }
 }

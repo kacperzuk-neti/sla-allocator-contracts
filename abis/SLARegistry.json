@@ -544,6 +544,11 @@
   },
   {
     "type": "error",
+    "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FailedCall",
     "inputs": []
   },
@@ -557,11 +562,6 @@
         "internalType": "CommonTypes.FilActorId"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidAddress",
-    "inputs": []
   },
   {
     "type": "error",
