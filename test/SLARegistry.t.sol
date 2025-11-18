@@ -165,4 +165,70 @@ contract SLARegistryTest is Test {
         vm.prank(client);
         slaRegistry.registerSLA(client, provider, slaParams);
     }
+
+    function testLatencyCheck() public {
+        SLARegistry.SLAParams memory single = SLARegistry.SLAParams({
+            availability: 0, latency: 50, indexing: 0, retention: 0, bandwidth: 0, stability: 0, registered: false
+        });
+
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, single);
+        oracle.setAttestations(block.timestamp, 40, 0, 0, 0, 0, 0);
+        assertEq(slaRegistry.score(client, provider), 100);
+    }
+
+    function testRetentionCheck() public {
+        SLARegistry.SLAParams memory single = SLARegistry.SLAParams({
+            availability: 0, latency: 0, indexing: 0, retention: 50, bandwidth: 0, stability: 0, registered: false
+        });
+
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, single);
+        oracle.setAttestations(block.timestamp, 0, 60, 0, 0, 0, 0);
+        assertEq(slaRegistry.score(client, provider), 100);
+    }
+
+    function testBandwidthCheck() public {
+        SLARegistry.SLAParams memory single = SLARegistry.SLAParams({
+            availability: 0, latency: 0, indexing: 0, retention: 0, bandwidth: 50, stability: 0, registered: false
+        });
+
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, single);
+        oracle.setAttestations(block.timestamp, 0, 0, 60, 0, 0, 0);
+        assertEq(slaRegistry.score(client, provider), 100);
+    }
+
+    function testStabilityCheck() public {
+        SLARegistry.SLAParams memory single = SLARegistry.SLAParams({
+            availability: 0, latency: 0, indexing: 0, retention: 0, bandwidth: 0, stability: 50, registered: false
+        });
+
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, single);
+        oracle.setAttestations(block.timestamp, 0, 0, 0, 60, 0, 0);
+        assertEq(slaRegistry.score(client, provider), 100);
+    }
+
+    function testAvailabilityCheck() public {
+        SLARegistry.SLAParams memory single = SLARegistry.SLAParams({
+            availability: 50, latency: 0, indexing: 0, retention: 0, bandwidth: 0, stability: 0, registered: false
+        });
+
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, single);
+        oracle.setAttestations(block.timestamp, 0, 0, 0, 0, 60, 0);
+        assertEq(slaRegistry.score(client, provider), 100);
+    }
+
+    function testIndexingCheck() public {
+        SLARegistry.SLAParams memory single = SLARegistry.SLAParams({
+            availability: 0, latency: 0, indexing: 50, retention: 0, bandwidth: 0, stability: 0, registered: false
+        });
+
+        vm.prank(client);
+        slaRegistry.registerSLA(client, provider, single);
+        oracle.setAttestations(block.timestamp, 0, 0, 0, 0, 0, 60);
+        assertEq(slaRegistry.score(client, provider), 100);
+    }
 }
