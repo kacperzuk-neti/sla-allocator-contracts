@@ -96,7 +96,7 @@ struct SPClient {
 address beneficiaryRegistry;
 address slaAllocatorContract;
 mapping(address client => mapping(address provider => uint256 amount)) allowances;
-mapping(address provider => SPClient client) spClients;
+mapping(address provider => SPClient[] client) spClients;
 // and items inherited from OpenZeppelin's AccessControl, UUPSUpgradeable and Multicall
 ```
 
