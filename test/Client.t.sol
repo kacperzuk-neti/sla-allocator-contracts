@@ -336,7 +336,7 @@ contract ClientTest is Test {
         assertEq(client.allowances(clientAddress, SP2), 0);
     }
 
-        function testClaimExtensionDecreaseAllowance() public {
+    function testClaimExtensionDecreaseAllowance() public {
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
         transferParams.operator_data = hex"82808183194E20011A005034AC";
