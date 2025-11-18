@@ -65,6 +65,7 @@ contract ClientTest is Test {
         address actorIdProxy = address(new MockProxy(address(5555)));
         vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
         vm.etch(address(5555), address(actorIdMock).code);
+        actorIdMock = ActorIdMock(payable(address(5555)));
         vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
 
         actorIdMock.setGetClaimsResult(
@@ -75,7 +76,7 @@ contract ClientTest is Test {
         transferParams = DataCapTypes.TransferParams({
             to: CommonTypes.FilAddress(transferTo),
             amount: CommonTypes.BigInt({val: hex"DE0B6B3A7640000000", neg: false}),
-            // [[[1000, 42(h'000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA22'),
+            // [[[20000, 42(h'000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA22'),
             //    2048, 518400, 5256000, 305], [...]], []]
             operator_data: hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
         });
@@ -286,5 +287,61 @@ contract ClientTest is Test {
         vm.prank(clientAddress);
         client.transfer(transferParams);
         assertEq(client.allowances(clientAddress, SP2), 0);
+    }
+
+    function testClaimExtensionNonExistent() public {
+        // 0 success_count
+        actorIdMock.setGetClaimsResult(hex"8282008080");
+        transferParams.operator_data = hex"82808183194E20011A005034AC";
+        vm.prank(clientAddress);
+        vm.expectRevert(Client.GetClaimsCallFailed.selector);
+        client.transfer(transferParams);
+    }
+
+    function testClaimExtension() public {
+        // params taken directly from `boost extend-deal` message
+        // no allocations
+        // 1 extension for provider 20000 and claim id 1
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        transferParams.operator_data = hex"82808183194E20011A005034AC";
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testTransferRevertInsufficientAllowanceForClaims() public {
+        transferParams.operator_data = hex"82808183194E20011A005034AC";
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.InsufficientAllowance.selector));
+        client.transfer(transferParams);
+    }
+
+    function testClaimExtensionGetClaimsFail() public {
+        vm.etch(CALL_ACTOR_ID, address(builtInActorForTransferFunctionMock).code);
+        transferParams.operator_data = hex"82808183194E20011A005034AC";
+        vm.prank(clientAddress);
+        vm.expectRevert(Client.GetClaimsCallFailed.selector);
+        client.transfer(transferParams);
+    }
+
+    function testTransferDoubleClaimExtension() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        transferParams.operator_data = hex"82808283194E20011A005034AC83194E20011A005034AC";
+        actorIdMock.setGetClaimsResult(
+            hex"8282028082881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+        );
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+        assertEq(client.allowances(clientAddress, SP2), 0);
+    }
+
+        function testClaimExtensionDecreaseAllowance() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        transferParams.operator_data = hex"82808183194E20011A005034AC";
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+        assertEq(client.allowances(clientAddress, SP2), 2048);
     }
 }
