@@ -16,6 +16,14 @@ contract BuiltInActorForTransferFunctionMock {
                 0, 0x51, hex"82824400C2A101834E0002863C1F5CDAE42F9540000000401A005B8D80854400D4C1014207D01A006ACFC0F5F4"
             );
         }
+        if (target == 6 && methodNum == 2199871187) {
+            // verifreg exit code error
+            return abi.encode(
+                1,
+                0x51,
+                hex"8282018081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+            );
+        }
         if (target == 7 && methodNum == 80475954) {
             // datacap transfer failed
             return abi.encode(1, 0x00, "");
