@@ -4,6 +4,8 @@
 pragma solidity 0.8.25;
 
 contract ActorIdExitCodeErrorFailingMock {
+    error MethodNotFound();
+
     receive() external payable {}
 
     // solhint-disable-next-line no-complex-fallback
