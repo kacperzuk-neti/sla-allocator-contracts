@@ -97,19 +97,6 @@
   },
   {
     "type": "function",
-    "name": "clientSmartContract",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract Client"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -266,19 +253,6 @@
   },
   {
     "type": "function",
-    "name": "setClientSmartContract",
-    "inputs": [
-      {
-        "name": "newClientSmartContract",
-        "type": "address",
-        "internalType": "contract Client"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setSLAAllocator",
     "inputs": [
       {
@@ -389,19 +363,6 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ClientSmartContractUpdated",
-    "inputs": [
-      {
-        "name": "newClientSmartContract",
-        "type": "address",
-        "indexed": false,
-        "internalType": "contract Client"
       }
     ],
     "anonymous": false
