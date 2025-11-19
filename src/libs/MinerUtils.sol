@@ -10,10 +10,10 @@ import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdCo
 import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 
 /**
- * @title GetBeneficiary
- * @notice Library for retrieving beneficiary information from Filecoin miner actors
+ * @title MinerUtils
+ * @notice Library for retrieving and validating Filecoin miner actor information
  */
-library GetBeneficiary {
+library MinerUtils {
     error ExitCodeError();
     error NoBeneficiarySet();
     error QuotaCannotBeNegative();
@@ -32,6 +32,21 @@ library GetBeneficiary {
      * @notice Minimum beneficiary quota constant.
      */
     uint256 private constant MIN_BENEFICIARY_QUOTA = 195884047900000000000000000000;
+
+    /**
+     * @notice Retrieves the owner information for a given miner actor ID.
+     * @dev Wraps the numeric minerID into a FilActorId and calls MinerAPI.getOwner.
+     *      Reverts with ExitCodeError if the FVM call returns a non-zero exit code.
+     * @param minerID The numeric Filecoin miner actor id.
+     * @return ownerData The MinerTypes.GetOwnerReturn struct returned by the actor call.
+     */
+    function getOwner(CommonTypes.FilActorId minerID) internal view returns (MinerTypes.GetOwnerReturn memory) {
+        (int256 exitCode, MinerTypes.GetOwnerReturn memory ownerData) = MinerAPI.getOwner(minerID);
+        if (exitCode != 0) {
+            revert ExitCodeError();
+        }
+        return ownerData;
+    }
 
     /**
      * @notice Retrieves the beneficiary information for a given miner actor ID.
