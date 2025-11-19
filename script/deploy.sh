@@ -83,9 +83,6 @@ echo "Deployer: $ADMIN"
 slaAllocator=$(deploySLAAllocator)
 ((nonce += 2))
 
-client=$(deployClient "$slaAllocator")
-((nonce += 2))
-
 beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator" "$BURN_ADDRESS")
 ((nonce += 3))
 
