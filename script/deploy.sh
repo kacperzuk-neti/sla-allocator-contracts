@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+BURN_ADDRESS='0x0000000000000000000000000000000000000000'
 ADMIN=$(cast wallet address "$PRIVATE_KEY")
 nonce=$(cast nonce --rpc-url "$RPC_URL" "$ADMIN")
 
@@ -32,11 +33,16 @@ function deployBeneficiaryFactory() {
     exit 1
   fi
 
+  if [ -z "$2" ]; then
+    echo "deployBeneficiaryFactory needs burn address" >&2
+    exit 1
+  fi
+
   beneficiaryImpl=$(_deploy Beneficiary)
   ((nonce += 1))
   impl=$(_deploy BeneficiaryFactory)
   ((nonce += 1))
-  calldata=$(cast calldata 'initialize(address,address,address)' "$ADMIN" "$beneficiaryImpl" "$1")
+  calldata=$(cast calldata 'initialize(address,address,address,address)' "$ADMIN" "$beneficiaryImpl" "$1" "$2")
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 
@@ -77,7 +83,7 @@ echo "Deployer: $ADMIN"
 slaAllocator=$(deploySLAAllocator)
 ((nonce += 2))
 
-beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator")
+beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator" "$BURN_ADDRESS")
 ((nonce += 3))
 
 client=$(deployClient "$slaAllocator" "$beneficiaryFactory")

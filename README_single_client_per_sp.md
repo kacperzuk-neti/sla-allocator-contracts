@@ -34,21 +34,26 @@ Expected interface:
 ```
 interface SLAAllocator {
     struct SLA {
-        address contract;
+        SLARegistry registry;
         FilActorId provider;
     }
     
-    function initialize(address admin, address manager, address beneficiaryRegistry, address clientSmartContract) external;
+    function initialize(address admin, address manager) external;
+
+    function initialize2(Client clientSmartContract_, BeneficiaryFactory beneficiaryFactory_) external;
 
     // use Verifreg powers to mint datacap to a client smart contract
     function mintDataCap(uint256 amount) external onlyRole(MANAGER_ROLE);
     
     // request datacap based on SLAs
     function requestDataCap(SLA[] slas, uint256 amount) external;
+
+    // additional getter to retrieve all providers as FilActorIds
+    function getProviders() external view returns (CommonTypes.FilActorId[] memory);
     
     // administrative
-    function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(ADMIN_ROLE);
-    function setClientSmartContract(address newClientSmartContract) external onlyRole(ADMIN_ROLE);
+    function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(DEFAULT_ADMIN_ROLE);
+    function setClientSmartContract(address newClientSmartContract) external onlyRole(DEFAULT_ADMIN_ROLE);
     // and functions inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
 }
 ```
@@ -59,7 +64,7 @@ mapping(FilActorId provider => address client) providerClients; // temporary
 FilActorId[] providers; // temporary, for Oracle Service to know which providers to track
 address beneficiaryRegistry;
 address clientSmartContract;
-mapping(address client => mapping(FilActorId provider => address contract)) slaContracts;
+mapping(address client => mapping(FilActorId provider => SLARegistry contractAddress)) slaContracts;
 // and items inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
 ```
 
@@ -85,7 +90,7 @@ interface Client {
     function decreaseAllowance(address client, FilActorId provider, uint256 amount) external onlyRole(ALLOCATOR_ROLE);
 
     // administrative
-    function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(ADMIN_ROLE);
+    function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(DEFAULT_ADMIN_ROLE);
     // and functions inherited from OpenZeppelin's AccessControl, UUPSUpgradeable and Multicall
 }
 ```
@@ -94,7 +99,7 @@ Expected storage items:
 ```
 address beneficiaryRegistry;
 address slaAllocatorContract;
-mapping(address client => mapping(address provider => uint256 amount)) allowances;
+mapping(address client => mapping(FilActorId provider => uint256 amount)) allowances;
 // and items inherited from OpenZeppelin's AccessControl, UUPSUpgradeable and Multicall
 ```
 
@@ -115,15 +120,15 @@ Expected interface:
 ```
 interface Beneficiary {
     function initialize(address admin, address provider, address slaAllocator, address burnAddress) external;
-    function withdraw(FilAddress recipient) external onlyRole(WITHDRAWER_ROLE);
+    function withdraw(FilAddress calldata recipient) external onlyRole(WITHDRAWER_ROLE);
     
     receive();
     
-    function changeBeneficiary(CommonTypes.FilActorId minerId, CommonTypes.FilAddresses newBeneficiary, uint256 newQuota, int64 newExpirationChainEpoch) external onlyRole(ADMIN_ROLE);
+    function changeBeneficiary(CommonTypes.FilActorId minerId, CommonTypes.FilAddress calldata newBeneficiary, uint256 newQuota, int64 newExpirationChainEpoch) external onlyRole(DEFAULT_ADMIN_ROLE);
 
     // administrative
-    function setSLAAllocator(address new) external onlyRole(ADMIN_ROLE);
-    function setBurnAddress(address new) external onlyRole(ADMIN_ROLE);
+    function setSLAAllocator(address newSLAAllocator) external onlyRole(DEFAULT_ADMIN_ROLE);
+    function setBurnAddress(address newBurnAddress) external onlyRole(DEFAULT_ADMIN_ROLE);
     // and functions inherited from OpenZeppelin's AccessControl
 }
 ```
@@ -151,10 +156,10 @@ interface SLARegistryInterface {
 **FIDLSLARegistry** will be a reference **SLARegistry** provided by FIDL. It will be upgradeable and will implement the following interface:
 ```
 interface FIDLSLARegistry is SLARegistryInterface {
-    function initialize(address admin, address oracle) external;
+    function initialize(address admin, SLIOracle oracle) external;
 
     // callable by the client or miner owner
-    function registerSLA(address client, address provider, SLAParams slaParams) external;
+    function registerSLA(address client, FilActorId provider, SLAParams memory slaParams) external;
 }
 ```
 
@@ -175,13 +180,13 @@ interface FIDLOracle {
         uint16 bandwidth;
         uint16 stability;
     }
-    function setSLI(address provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE);
+    function setSLI(FilActorId provider, SLIAttestation calldata slis) external onlyRole(ORACLE_ROLE) {
 }
 ```
 
 Expected storage items:
 ```
-mapping(address provider => SLIAttestation attestation) public attestations;
+mapping(FilActorId provider => SLIAttestation attestation) public attestations;
 ```
 
 ## Diagrams

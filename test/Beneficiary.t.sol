@@ -37,6 +37,7 @@ contract BeneficiaryTest is Test {
     CommonTypes.FilActorId public provider = CommonTypes.FilActorId.wrap(0x999);
     SLAAllocator public slaAllocator;
     address public manager = vm.addr(1);
+    address public burnAddress = vm.addr(2);
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
     address public constant CALL_ACTOR_ADDRESS = 0xfe00000000000000000000000000000000000003;
 
@@ -73,19 +74,21 @@ contract BeneficiaryTest is Test {
         vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
         resolveAddress.setId(uint64(1022));
 
-        beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator);
+        beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator, burnAddress);
     }
 
     function setupBeneficiary(
         address admin_,
         address withdrawer_,
         CommonTypes.FilActorId provider_,
-        SLAAllocator slaAllocator_
+        SLAAllocator slaAllocator_,
+        address burnAddress_
     ) public returns (Beneficiary) {
         Beneficiary impl = new Beneficiary();
 
         // solhint-disable gas-small-strings
-        bytes memory initData = abi.encodeCall(Beneficiary.initialize, (admin_, withdrawer_, provider_, slaAllocator_));
+        bytes memory initData =
+            abi.encodeCall(Beneficiary.initialize, (admin_, withdrawer_, provider_, slaAllocator_, burnAddress_));
         // solhint-enable gas-small-strings
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         return Beneficiary(payable(address(proxy)));
@@ -112,25 +115,25 @@ contract BeneficiaryTest is Test {
         assertTrue(beneficiary.getRoleAdmin(withdrawerRole) == managerRole);
     }
 
-    function testSetSlashRecipient() public {
-        beneficiary.setSlashRecipient(address(0x123));
-        assertEq(beneficiary.slashRecipient(), address(0x123));
+    function testSetBurnAddress() public {
+        beneficiary.setBurnAddress(address(0x123));
+        assertEq(beneficiary.burnAddress(), address(0x123));
     }
 
-    function testSetSlashRecipientEmitsEvent() public {
+    function testSetBurnAddressEmitsEvent() public {
         vm.expectEmit(true, true, true, true);
-        emit Beneficiary.SlashRecipientUpdated(address(0x123));
-        beneficiary.setSlashRecipient(address(0x123));
+        emit Beneficiary.BurnAddressUpdated(address(0x123));
+        beneficiary.setBurnAddress(address(0x123));
     }
 
-    function testSetSlashRecipientRevert() public {
+    function testSetBurnAddressRevert() public {
         address notAdmin = address(0x333);
         bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
         vm.prank(notAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
         );
-        beneficiary.setSlashRecipient(address(0x123));
+        beneficiary.setBurnAddress(address(0x123));
     }
 
     function testWithdrawForGreenBand() public {
@@ -144,7 +147,7 @@ contract BeneficiaryTest is Test {
 
     function testWithdrawForAmberBand() public {
         CommonTypes.FilActorId providerWithAmberBandScore = CommonTypes.FilActorId.wrap(0x123);
-        beneficiary = setupBeneficiary(address(this), manager, providerWithAmberBandScore, slaAllocator);
+        beneficiary = setupBeneficiary(address(this), manager, providerWithAmberBandScore, slaAllocator, burnAddress);
         vm.deal(address(beneficiary), 10000);
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
@@ -155,7 +158,7 @@ contract BeneficiaryTest is Test {
 
     function testWithdrawForRedBand() public {
         CommonTypes.FilActorId providerWithRedBandScore = CommonTypes.FilActorId.wrap(0x456);
-        beneficiary = setupBeneficiary(address(this), manager, providerWithRedBandScore, slaAllocator);
+        beneficiary = setupBeneficiary(address(this), manager, providerWithRedBandScore, slaAllocator, burnAddress);
         vm.deal(address(beneficiary), 10000);
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);

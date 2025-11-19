@@ -16,6 +16,7 @@ import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrec
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
 import {BuiltInActorForTransferFunctionMock} from "./contracts/BuiltInActorForTransferFunctionMock.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract ClientTest is Test {
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
@@ -161,12 +162,11 @@ contract ClientTest is Test {
     function testAuthorizeUpgradeRevert() public {
         address newImpl = address(new Client());
         address unauthorized = vm.addr(1);
-        bytes32 adminRole = client.DEFAULT_ADMIN_ROLE();
-        // solhint-disable-next-line gas-small-strings
-        bytes4 sel = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
-
+        bytes32 upgraderRole = client.UPGRADER_ROLE();
         vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(sel, unauthorized, adminRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, upgraderRole)
+        );
         client.upgradeToAndCall(newImpl, "");
     }
 
