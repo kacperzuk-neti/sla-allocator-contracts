@@ -123,13 +123,13 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     }
 
     /**
-     * @notice Emits a SlashRecipientUpdated event.
-     * @param burnAddress_ The address to set as the burn address.
+     * @notice Emits a BurnAddressUpdated event.
+     * @param newBurnAddress The address to set as the burn address.
      * @dev Only the admin can set the burn address.
      */
-    function setBurnAddress(address burnAddress_) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        burnAddress = burnAddress_;
-        emit BurnAddressUpdated(burnAddress_);
+    function setBurnAddress(address newBurnAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        burnAddress = newBurnAddress;
+        emit BurnAddressUpdated(newBurnAddress);
     }
 
     /**
