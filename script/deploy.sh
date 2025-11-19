@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+BURN_ADDRESS='0x0000000000000000000000000000000000000000'
 ADMIN=$(cast wallet address "$PRIVATE_KEY")
 nonce=$(cast nonce --rpc-url "$RPC_URL" "$ADMIN")
 
