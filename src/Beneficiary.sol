@@ -10,7 +10,6 @@ import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
-import {Client} from "./Client.sol";
 /**
  * @title Beneficiary
  * @notice Upgradeable contract for managing beneficiaries with role-based access control

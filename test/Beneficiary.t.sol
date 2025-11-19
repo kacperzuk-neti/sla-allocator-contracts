@@ -24,7 +24,6 @@ import {ActorIdMock} from "./contracts/ActorIdMock.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
 import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
-import {Client} from "../src/Client.sol";
 
 // solhint-disable-next-line max-states-count
 contract BeneficiaryTest is Test {
