@@ -27,7 +27,6 @@ import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
 import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 // solhint-disable-next-line max-states-count
 contract SLAAllocatorTest is Test {
@@ -312,7 +311,9 @@ contract SLAAllocatorTest is Test {
         BeneficiaryFactory newBeneficiaryFactory = new BeneficiaryFactory();
         bytes32 adminRole = slaAllocator.DEFAULT_ADMIN_ROLE();
         vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
+        );
         slaAllocator.setBeneficiaryFactory(newBeneficiaryFactory);
     }
 
@@ -335,7 +336,9 @@ contract SLAAllocatorTest is Test {
         Client newClientSmartContract = new Client();
         bytes32 adminRole = slaAllocator.DEFAULT_ADMIN_ROLE();
         vm.prank(unauthorized);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
+        );
         slaAllocator.setClientSmartContract(newClientSmartContract);
     }
 }
