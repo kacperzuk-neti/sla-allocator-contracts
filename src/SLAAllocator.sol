@@ -105,6 +105,18 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     event SLARegistered(address indexed client, CommonTypes.FilActorId indexed provider);
 
+    /**
+     * @notice Emitted when beneficiary factory is set
+     * @param newBeneficiaryFactory The new beneficiary factory
+     */
+    event BeneficiaryFactorySet(BeneficiaryFactory indexed newBeneficiaryFactory);
+
+    /**
+     * @notice Emitted when client smart contract is set
+     * @param newClientSmartContract The new client smart contract
+     */
+    event ClientSmartContractSet(Client indexed newClientSmartContract);
+
     error BeneficiaryFactoryAlreadySet();
 
     /**
@@ -226,5 +238,23 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
             }
         }
         providers.push(provider);
+    }
+
+    /**
+     * @notice Setter for beneficiary factory
+     * @param newBeneficiaryFactory The new beneficiary factory
+     */
+    function setBeneficiaryFactory(BeneficiaryFactory newBeneficiaryFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        beneficiaryFactory = newBeneficiaryFactory;
+        emit BeneficiaryFactorySet(newBeneficiaryFactory);
+    }
+
+    /**
+     * @notice Setter for client smart contract
+     * @param newClientSmartContract The new client smart contract
+     */
+    function setClientSmartContract(Client newClientSmartContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        clientSmartContract = newClientSmartContract;
+        emit ClientSmartContractSet(newClientSmartContract);
     }
 }
