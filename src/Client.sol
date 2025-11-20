@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -14,6 +15,7 @@ import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {UtilsHandlers} from "filecoin-solidity/v0.8/utils/UtilsHandlers.sol";
 import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 
 /**
  * @title Client
@@ -41,6 +43,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @notice Mapping of allowances for clients and providers using FilActorId
      */
     mapping(address client => mapping(CommonTypes.FilActorId provider => uint256 amount)) public allowances;
+
+    /**
+     * @notice Mapping of storage providers to their clients and their data usage
+     */
+    mapping(address provider => EnumerableMap.AddressToUintMap client) private spClients;
 
     /**
      * @notice  Precision factor for DataCap tokens (1e18)
@@ -244,6 +251,9 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][alloc.provider] -= size;
+            address allocProvider = FilAddressIdConverter.toAddress(CommonTypes.FilActorId.unwrap(alloc.provider));
+            (, uint256 prevSize) = EnumerableMap.tryGet(spClients[allocProvider], msg.sender);
+            EnumerableMap.set(spClients[allocProvider], msg.sender, prevSize + size);
         }
     }
 
@@ -308,6 +318,9 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][provider] -= size;
+            address allocProvider = FilAddressIdConverter.toAddress(CommonTypes.FilActorId.unwrap(provider));
+            (, uint256 prevSize) = EnumerableMap.tryGet(spClients[allocProvider], msg.sender);
+            EnumerableMap.set(spClients[allocProvider], msg.sender, prevSize + size);
         }
     }
 
@@ -420,6 +433,17 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     function setBeneficiaryFactory(BeneficiaryFactory newBeneficiaryFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
         beneficiaryFactory = newBeneficiaryFactory;
+    }
+
+    /**
+     * @notice Returns the data usage of a client for a given provider
+     * @param provider Address of the provider
+     * @param client Address of the client
+     * @return Data usage of the client for the given provider
+     */
+    function getSPClients(address provider, address client) public view returns (uint256) {
+        (bool exists, uint256 value) = EnumerableMap.tryGet(spClients[provider], client);
+        return exists ? value : 0;
     }
 
     // solhint-disable no-empty-blocks
