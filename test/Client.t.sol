@@ -344,4 +344,19 @@ contract ClientTest is Test {
         client.transfer(transferParams);
         assertEq(client.allowances(clientAddress, SP2), 2048);
     }
+
+    function testSPClientsMappingUpdate() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+
+        address providerEthAddress = FilAddressIdConverter.toAddress(20000);
+        uint256 valueBefore = client.getSPClients(providerEthAddress, clientAddress);
+
+        assertEq(valueBefore, 0);
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+
+        uint256 valueAfter = client.getSPClients(providerEthAddress, clientAddress);
+        assertEq(valueAfter, 4096);
+    }
 }
