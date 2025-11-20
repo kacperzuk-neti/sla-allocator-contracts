@@ -52,7 +52,7 @@ function deployClient() {
     echo "deployClient needs slaAllocator address" >&2
     exit 1
   fi
-  
+
   if [ -z "$2" ]; then
     echo "deployClient needs beneficiaryFactory address" >&2
     exit 1
@@ -76,9 +76,7 @@ function deploySLARegistry() {
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 
-echo -n "Deploying to chain: "
-cast chain-id --rpc-url "$RPC_URL"
-echo "Deployer: $ADMIN"
+CHAIN_ID=$(cast chain-id --rpc-url "$RPC_URL")
 
 slaAllocator=$(deploySLAAllocator)
 ((nonce += 2))
@@ -98,10 +96,14 @@ slaRegistry=$(deploySLARegistry "$sliOracle")
 cast send --nonce "$nonce" --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY" "$slaAllocator" 'initialize2(address,address)' "$client" "$beneficiaryFactory" >/dev/null
 ((nonce += 1))
 
-echo "BeneficiaryFactory: $beneficiaryFactory"
-echo "SLAAllocator: $slaAllocator"
-echo "SLARegistry: $slaRegistry"
-echo "SLIOracle: $sliOracle"
-echo "ClientSC: $client"
-echo
-echo "Deployed by: $ADMIN"
+cat <<EOF
+{
+  "chainId": $CHAIN_ID,
+  "deployer": "$ADMIN",
+  "beneficiaryFactory": "$beneficiaryFactory",
+  "SLAAllocator": "$slaAllocator",
+  "SLARegistry": "$slaRegistry",
+  "SLIOracle": "$sliOracle",
+  "ClientSC": "$client"
+}
+EOF
