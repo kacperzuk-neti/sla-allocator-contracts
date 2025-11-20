@@ -337,6 +337,32 @@
   },
   {
     "type": "function",
+    "name": "setBeneficiaryFactory",
+    "inputs": [
+      {
+        "name": "newBeneficiaryFactory",
+        "type": "address",
+        "internalType": "contract BeneficiaryFactory"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setClientSmartContract",
+    "inputs": [
+      {
+        "name": "newClientSmartContract",
+        "type": "address",
+        "internalType": "contract Client"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "slaContracts",
     "inputs": [
       {
@@ -395,6 +421,32 @@
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "event",
+    "name": "BeneficiaryFactorySet",
+    "inputs": [
+      {
+        "name": "newBeneficiaryFactory",
+        "type": "address",
+        "indexed": true,
+        "internalType": "contract BeneficiaryFactory"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ClientSmartContractSet",
+    "inputs": [
+      {
+        "name": "newClientSmartContract",
+        "type": "address",
+        "indexed": true,
+        "internalType": "contract Client"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
