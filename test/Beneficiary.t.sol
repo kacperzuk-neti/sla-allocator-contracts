@@ -265,6 +265,29 @@ contract BeneficiaryTest is Test {
         );
     }
 
+    function testSetSLAAllocator() public {
+        SLAAllocator newSLAAllocator = SLAAllocator(address(0x123));
+        beneficiary.setSLAAllocator(newSLAAllocator);
+        assertEq(address(beneficiary.slaAllocator()), address(newSLAAllocator));
+    }
+
+    function testSetSLAAllocatorEmitsEvent() public {
+        SLAAllocator newSLAAllocator = SLAAllocator(address(0x123));
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.SLAAllocatorUpdated(newSLAAllocator);
+        beneficiary.setSLAAllocator(newSLAAllocator);
+    }
+
+    function testSetSLAAllocatorRevert() public {
+        address notAdmin = address(0x333);
+        bytes32 expectedRole = beneficiary.DEFAULT_ADMIN_ROLE();
+        vm.prank(notAdmin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, notAdmin, expectedRole)
+        );
+        beneficiary.setSLAAllocator(SLAAllocator(address(0x123)));
+    }
+
     // solhint-disable-next-line no-empty-blocks
     function testChangeBeneficiaryCalldata() public {
         // FIXME verify that miner is called correctly for changeBeneficiary

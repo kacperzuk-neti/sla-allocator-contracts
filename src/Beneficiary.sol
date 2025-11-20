@@ -10,7 +10,6 @@ import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
-
 /**
  * @title Beneficiary
  * @notice Upgradeable contract for managing beneficiaries with role-based access control
@@ -48,6 +47,12 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @param burnAddress The address to set as the burn address.
      */
     event BurnAddressUpdated(address indexed burnAddress);
+
+    /**
+     * @notice Emits a SLAAllocatorUpdated event.
+     * @param newSLAAllocator The SLA allocator to set.
+     */
+    event SLAAllocatorUpdated(SLAAllocator newSLAAllocator);
 
     // solhint-disable gas-indexed-events
     /**
@@ -120,11 +125,21 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     /**
      * @notice Emits a BurnAddressUpdated event.
      * @param newBurnAddress The address to set as the burn address.
-     * @dev Only the admin can set the slash recipient.
+     * @dev Only the admin can set the burn address.
      */
     function setBurnAddress(address newBurnAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
         burnAddress = newBurnAddress;
         emit BurnAddressUpdated(newBurnAddress);
+    }
+
+    /**
+     * @notice Sets the SLA allocator.
+     * @param newSLAAllocator The SLA allocator to set.
+     * @dev Only the admin can set the SLA allocator.
+     */
+    function setSLAAllocator(SLAAllocator newSLAAllocator) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        slaAllocator = newSLAAllocator;
+        emit SLAAllocatorUpdated(newSLAAllocator);
     }
 
     /**

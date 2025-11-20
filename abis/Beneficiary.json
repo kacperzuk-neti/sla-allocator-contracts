@@ -253,6 +253,19 @@
   },
   {
     "type": "function",
+    "name": "setSLAAllocator",
+    "inputs": [
+      {
+        "name": "newSLAAllocator",
+        "type": "address",
+        "internalType": "contract SLAAllocator"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "slaAllocator",
     "inputs": [],
     "outputs": [
@@ -438,6 +451,19 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SLAAllocatorUpdated",
+    "inputs": [
+      {
+        "name": "newSLAAllocator",
+        "type": "address",
+        "indexed": false,
+        "internalType": "contract SLAAllocator"
       }
     ],
     "anonymous": false
