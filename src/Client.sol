@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -20,6 +21,8 @@ import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
  * @notice Upgradeable contract for managing client allowances with role-based access control
  */
 contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using EnumerableMap for EnumerableMap.AddressToUintMap;
+
     /**
      * @notice Allocator role which allows for increasing and decreasing allowances
      */
@@ -41,6 +44,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @notice Mapping of allowances for clients and providers using FilActorId
      */
     mapping(address client => mapping(CommonTypes.FilActorId provider => uint256 amount)) public allowances;
+
+    /**
+     * @notice Mapping of storage providers to their clients and their data usage
+     */
+    mapping(CommonTypes.FilActorId provider => EnumerableMap.AddressToUintMap client) private spClients;
 
     /**
      * @notice  Precision factor for DataCap tokens (1e18)
@@ -244,6 +252,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][alloc.provider] -= size;
+            (, uint256 prevSize) = spClients[alloc.provider].tryGet(msg.sender);
+            spClients[alloc.provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -308,6 +318,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][provider] -= size;
+            (, uint256 prevSize) = spClients[provider].tryGet(msg.sender);
+            spClients[provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -420,6 +432,17 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     function setBeneficiaryFactory(BeneficiaryFactory newBeneficiaryFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
         beneficiaryFactory = newBeneficiaryFactory;
+    }
+
+    /**
+     * @notice Returns the total data usage (sum of allocations) of a specific client for a given provider.
+     * @param provider Address of the provider
+     * @param client Address of the client
+     * @return Sum of client allocations per SP
+     */
+    function getSPClients(CommonTypes.FilActorId provider, address client) public view returns (uint256) {
+        (bool exists, uint256 value) = EnumerableMap.tryGet(spClients[provider], client);
+        return exists ? value : 0;
     }
 
     // solhint-disable no-empty-blocks

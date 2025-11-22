@@ -344,4 +344,33 @@ contract ClientTest is Test {
         client.transfer(transferParams);
         assertEq(client.allowances(clientAddress, SP2), 2048);
     }
+
+    function testSPClientsMappingUpdateAllocations() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+
+        uint256 valueBefore = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
+        assertEq(valueBefore, 0);
+
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+
+        uint256 valueAfter = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
+        assertEq(valueAfter, 4096);
+    }
+
+    function testSPClientsMappingUpdateForClaimExtension() public {
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+
+        transferParams.operator_data = hex"82808183194E20011A005034AC";
+        uint256 valueBefore = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
+        assertEq(valueBefore, 0);
+
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+
+        uint256 valueAfter = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
+        assertEq(valueAfter, 2048);
+    }
 }
