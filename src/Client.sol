@@ -15,13 +15,14 @@ import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {UtilsHandlers} from "filecoin-solidity/v0.8/utils/UtilsHandlers.sol";
 import {GetBeneficiary} from "./libs/GetBeneficiary.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
-import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 
 /**
  * @title Client
  * @notice Upgradeable contract for managing client allowances with role-based access control
  */
 contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using EnumerableMap for EnumerableMap.AddressToUintMap;
+
     /**
      * @notice Allocator role which allows for increasing and decreasing allowances
      */
@@ -47,7 +48,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
      * @notice Mapping of storage providers to their clients and their data usage
      */
-    mapping(address provider => EnumerableMap.AddressToUintMap client) private spClients;
+    mapping(CommonTypes.FilActorId provider => EnumerableMap.AddressToUintMap client) private spClients;
 
     /**
      * @notice  Precision factor for DataCap tokens (1e18)
@@ -251,9 +252,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][alloc.provider] -= size;
-            address allocProvider = FilAddressIdConverter.toAddress(CommonTypes.FilActorId.unwrap(alloc.provider));
-            (, uint256 prevSize) = EnumerableMap.tryGet(spClients[allocProvider], msg.sender);
-            EnumerableMap.set(spClients[allocProvider], msg.sender, prevSize + size);
+            (, uint256 prevSize) = spClients[alloc.provider].tryGet(msg.sender);
+            spClients[alloc.provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -318,9 +318,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][provider] -= size;
-            address allocProvider = FilAddressIdConverter.toAddress(CommonTypes.FilActorId.unwrap(provider));
-            (, uint256 prevSize) = EnumerableMap.tryGet(spClients[allocProvider], msg.sender);
-            EnumerableMap.set(spClients[allocProvider], msg.sender, prevSize + size);
+            (, uint256 prevSize) = spClients[provider].tryGet(msg.sender);
+            spClients[provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -436,12 +435,12 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /**
-     * @notice Returns the data usage of a client for a given provider
+     * @notice Returns the total data usage (sum of allocations) of a specific client for a given provider.
      * @param provider Address of the provider
      * @param client Address of the client
-     * @return Data usage of the client for the given provider
+     * @return Sum of client allocations per SP
      */
-    function getSPClients(address provider, address client) public view returns (uint256) {
+    function getSPClients(CommonTypes.FilActorId provider, address client) public view returns (uint256) {
         (bool exists, uint256 value) = EnumerableMap.tryGet(spClients[provider], client);
         return exists ? value : 0;
     }
