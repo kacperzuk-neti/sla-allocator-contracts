@@ -154,8 +154,8 @@
     "inputs": [
       {
         "name": "provider",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       },
       {
         "name": "client",
