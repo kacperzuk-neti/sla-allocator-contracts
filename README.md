@@ -57,7 +57,9 @@ interface SLAAllocator {
     }
 
     struct Passport {
-        // TBD
+        address subject;
+        uint256 expiration_timestamp;
+        uint64 score;
     };
 
     struct PassportSigned {
@@ -83,7 +85,7 @@ interface SLAAllocator {
     struct PaymentTransactionSigned {
         PaymentTransaction tx;
         Signature sig;
-
+    }
 
     function initialize(address admin, address manager, address beneficiaryRegistry, address clientSmartContract, address attestator) external;
 
