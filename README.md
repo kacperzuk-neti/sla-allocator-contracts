@@ -6,7 +6,8 @@ We expect following actors and contracts in the system:
 2. **SP** - person that runs a miner that can store data and mine blocks
 3. **Miner** - instance of the [Miner Actor](https://github.com/filecoin-project/builtin-actors/tree/master/actors/miner)
 4. **SLAAllocator** - singleton smart contract that grants DataCap (via **Client Smart Contract**) for **SPs** with correct beneficiary set
-5. **Beneficiary** - smart contract (one per **Miner**) that manages payout of mining rewards to **SP**
+5. **Allocator Service** - off-chain service that provides attestations of Gitcoin Passport and deal payment
+6. **Beneficiary** - smart contract (one per **Miner**) that manages payout of mining rewards to **SP**
 7. **Client Smart Contract** - singleton smart contract that enforces restrictions on how DataCap can be spent by **Clients** and helps track metrics required by **Beneficiary** contract
 8. **SLARegistry** - smart contract that tracks current SLA score for a **Client**/**Provider** pair. Any contract implementing the correct interface may be used - we will provide a reference one based on SLIs from CDP.
 9. **Oracle** - smart contract that stores off-chain data regarding SLIs for providers. There may be many or none - **SLARegistry** contracts decide which oracles and how they want to use.
@@ -19,33 +20,65 @@ We expect following actors and contracts in the system:
 In practice, all mint allowance will immediately be used to mint DataCap to the **Client Smart Contract**. DataCap will be assigned to actual **Clients** as an allowance on the **Client Smart Contract**.
 
 It will assign DC to a client under following conditions:
-1. It has enough mint allowance.
+1. **SLAAllocator** has enough mint allowance.
 2. Sender, assumed to be the **Client**, has SLAs registered with all **SPs** that will be used in a compatible **SLARegistry** contract
-3. All **SPs** have a beneficiary set to an address contained in **Beneficiary Factory** registry, which effectively no quota (we require a very large quota to be set) and at least 5 year expiration time.
+3. **SP** has beneficiary set to an address contained in **Beneficiary Factory** registry, with effectively no quota (we require a very large quota to be set).
+4. For Passport-authenticated requests <= 1PiB:
+    * score above 20 the client
+    * one request per client per week
+    * tx payment info is valid and matches size
+    * tx payer is distinct from SP owner
+5. For Passport-authenticated requests > 1PiB:
+    * score above 20 for SP and client
+    * distinct stamps between SP and client
+    * one request per client per week
+    * tx payment info is valid and matches size
+    * tx payer is distinct from SP owner
+5. For non-Passport-authenticated requests:
+    * 5 requests per day GLOBALLY
+    * <= 100TiB
+    * tx payment info is valid and matches size
+    * tx payer is distinct from SP owner
 
 There will be following roles in this contract:
 * `ADMIN`, who can manage other roles and upgrade the contract
 * `MANAGER`, who can call `mintDataCap(uint256 amount)`.
+* `ATTESTATOR`, who can sign attestations of passport scores, stamps and transaction info
+
+// FIXME we must check past SLAs of the provider
 
 Expected interface:
 ```
 interface SLAAllocator {
-    struct SLA {
-        address contract;
-        FilActorId provider;
-    }
-    
-    function initialize(address admin, address manager, address beneficiaryRegistry, address clientSmartContract) external;
+    struct Passport {
+        // TBD
+    };
+
+    struct ManualAttestation {
+        // TBD
+    };
+
+    function initialize(address admin, address manager, address beneficiaryRegistry, address clientSmartContract, address attestator) external;
 
     // use Verifreg powers to mint datacap to a client smart contract
     function mintDataCap(uint256 amount) external onlyRole(MANAGER_ROLE);
     
     // request datacap based on SLAs
-    function requestDataCap(SLA[] slas, uint256 amount) external;
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount) external;
+
+    // request datacap based on SLAs and client's passport
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, Passport clientPassport) external;
+
+    // request datacap based on SLAs, client's passport and SP's passport
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, Passport clientPassport, Passport spPassport) external;
+
+    // request datacap based on SLAs and manual attestation
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, ManualAttestation attestation) external;
     
     // administrative
     function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(ADMIN_ROLE);
     function setClientSmartContract(address newClientSmartContract) external onlyRole(ADMIN_ROLE);
+    function setAttestator(address newAttestator) external onlyRole(ADMIN_ROLE);
     // and functions inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
 }
 ```
@@ -55,6 +88,7 @@ Expected storage items:
 address beneficiaryRegistry;
 address clientSmartContract;
 mapping(address client => mapping(address provider => address contract)) slaContracts;
+// FIXME rate limiting storage items
 // and items inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
 ```
 
