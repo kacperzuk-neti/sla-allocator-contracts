@@ -78,7 +78,6 @@ interface SLAAllocator {
     // administrative
     function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(ADMIN_ROLE);
     function setClientSmartContract(address newClientSmartContract) external onlyRole(ADMIN_ROLE);
-    function setAttestator(address newAttestator) external onlyRole(ADMIN_ROLE);
     // and functions inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
 }
 ```
