@@ -50,13 +50,40 @@ There will be following roles in this contract:
 Expected interface:
 ```
 interface SLAAllocator {
+    struct Signature {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     struct Passport {
         // TBD
     };
 
+    struct PassportSigned {
+        Passport passport;
+        Signature sig;
+    }
+
     struct ManualAttestation {
-        // TBD
+        string opaque_data;
+    }
+
+    struct ManualAttestationSigned {
+        ManualAttestation attestation;
+        Signature sig;
     };
+
+    struct PaymentTransaction {
+        FilAddress from;
+        FilAddress to;
+        uint256 amount;
+    }
+
+    struct PaymentTransactionSigned {
+        PaymentTransaction tx;
+        Signature sig;
+
 
     function initialize(address admin, address manager, address beneficiaryRegistry, address clientSmartContract, address attestator) external;
 
@@ -64,16 +91,16 @@ interface SLAAllocator {
     function mintDataCap(uint256 amount) external onlyRole(MANAGER_ROLE);
     
     // request datacap based on SLAs
-    function requestDataCap(FilActorId provider, address slaContract, uint256 amount) external;
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, PaymentTransactionSigned tx) external;
 
     // request datacap based on SLAs and client's passport
-    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, Passport clientPassport) external;
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, PassportSigned clientPassport, PaymentTransactionSigned tx) external;
 
     // request datacap based on SLAs, client's passport and SP's passport
-    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, Passport clientPassport, Passport spPassport) external;
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, PassportSigned clientPassport, PassportSigned spPassport) external;
 
     // request datacap based on SLAs and manual attestation
-    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, ManualAttestation attestation) external;
+    function requestDataCap(FilActorId provider, address slaContract, uint256 amount, ManualAttestationSigned attestation) external;
     
     // administrative
     function setBeneficiaryRegistry(address newBeneficiaryRegistry) external onlyRole(ADMIN_ROLE);
