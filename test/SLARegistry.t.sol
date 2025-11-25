@@ -10,12 +10,10 @@ import {SLIOracle} from "../src/SLIOracle.sol";
 import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLIOracle} from "./contracts/MockSLIOracle.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {MinerUtils} from "../src/libs/MinerUtils.sol";
 import {ActorIdMock} from "./contracts/ActorIdMock.sol";
 import {ResolveAddressPrecompileMock} from "./contracts/ResolveAddressPrecompileMock.sol";
 import {ActorIdExitCodeErrorFailingMock} from "./contracts/ActorIdExitCodeErrorFailingMock.sol";
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
-import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ActorIdUnauthorizedCallerFailingMock} from "./contracts/ActorIdUnauthorizedCallerFailingMock.sol";
 
 contract SLARegistryTest is Test {
@@ -141,23 +139,10 @@ contract SLARegistryTest is Test {
         assertFalse(slaRegistry.score(client, provider) == 0);
     }
 
-    function testSLARegistryExpectRevertExitCodeError() public {
-        vm.etch(address(5555), address(actorIdExitCodeErrorFailingMock).code);
-        vm.expectRevert(abi.encodeWithSelector(MinerUtils.ExitCodeError.selector));
-        slaRegistry.registerSLA(client, provider, slaParams);
-    }
-
     function testSLARegistryExpectRevertUnauthorizedCaller() public {
         resolveAddress.setId(CommonTypes.FilActorId.unwrap(provider));
         vm.etch(address(5555), address(actorIdUnauthorizedCallerFailingMock).code);
         vm.expectRevert(abi.encodeWithSelector(SLARegistry.UnauthorizedCaller.selector));
-        slaRegistry.registerSLA(client, provider, slaParams);
-    }
-
-    function testSLARegistryProvider() public {
-        resolveAddress.setId(CommonTypes.FilActorId.unwrap(provider));
-        address evmProviderAddress = FilAddressIdConverter.toAddress(CommonTypes.FilActorId.unwrap(provider));
-        vm.prank(evmProviderAddress);
         slaRegistry.registerSLA(client, provider, slaParams);
     }
 

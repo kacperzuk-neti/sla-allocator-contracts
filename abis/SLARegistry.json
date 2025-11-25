@@ -502,11 +502,6 @@
   },
   {
     "type": "error",
-    "name": "ActorNotFound",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "AddressEmptyCode",
     "inputs": [
       {
@@ -534,71 +529,13 @@
   },
   {
     "type": "error",
-    "name": "ExitCodeError",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "FailToCallActor",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "FailToCallActor",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "FailedCall",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "InvalidActorID",
-    "inputs": [
-      {
-        "name": "actorId",
-        "type": "uint64",
-        "internalType": "CommonTypes.FilActorId"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidCodec",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidResponseLength",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotEnoughBalance",
-    "inputs": [
-      {
-        "name": "balance",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
   },
   {
     "type": "error",

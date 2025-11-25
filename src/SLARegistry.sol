@@ -5,10 +5,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
-import {MinerUtils} from "./libs/MinerUtils.sol";
-import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
-import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 import {SLIOracle} from "./SLIOracle.sol";
 
 /**
@@ -99,12 +96,9 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param slaParams The SLA deal parameters
      */
     function registerSLA(address client, CommonTypes.FilActorId provider, SLAParams memory slaParams) external {
-        MinerTypes.GetOwnerReturn memory ownerData = MinerUtils.getOwner(provider);
         address caller = FilAddressIdConverter.normalize(msg.sender);
-        uint64 ownerId = PrecompilesAPI.resolveAddress(ownerData.owner);
-        address ownerAddress = FilAddressIdConverter.toAddress(ownerId);
 
-        if (caller != client && caller != ownerAddress) {
+        if (caller != client) {
             revert UnauthorizedCaller();
         }
 
