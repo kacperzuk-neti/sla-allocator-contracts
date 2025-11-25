@@ -291,4 +291,54 @@ contract SLAAllocatorTest is Test {
         );
         slaAllocator.addProvider(CommonTypes.FilActorId.wrap(2));
     }
+
+    function testSetBeneficiaryFactory() public {
+        BeneficiaryFactory newBeneficiaryFactory = new BeneficiaryFactory();
+        vm.prank(admin);
+        slaAllocator.setBeneficiaryFactory(newBeneficiaryFactory);
+        assertEq(address(slaAllocator.beneficiaryFactory()), address(newBeneficiaryFactory));
+    }
+
+    function testSetBeneficiaryFactoryEmitEvent() public {
+        BeneficiaryFactory newBeneficiaryFactory = new BeneficiaryFactory();
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SLAAllocator.BeneficiaryFactorySet(newBeneficiaryFactory);
+        slaAllocator.setBeneficiaryFactory(newBeneficiaryFactory);
+    }
+
+    function testSetBeneficiaryFactoryRevertUnauthorized() public {
+        BeneficiaryFactory newBeneficiaryFactory = new BeneficiaryFactory();
+        bytes32 adminRole = slaAllocator.DEFAULT_ADMIN_ROLE();
+        vm.prank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
+        );
+        slaAllocator.setBeneficiaryFactory(newBeneficiaryFactory);
+    }
+
+    function testSetClientSmartContract() public {
+        Client newClientSmartContract = new Client();
+        vm.prank(admin);
+        slaAllocator.setClientSmartContract(newClientSmartContract);
+        assertEq(address(slaAllocator.clientSmartContract()), address(newClientSmartContract));
+    }
+
+    function testSetClientSmartContractEmitEvent() public {
+        Client newClientSmartContract = new Client();
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SLAAllocator.ClientSmartContractSet(newClientSmartContract);
+        slaAllocator.setClientSmartContract(newClientSmartContract);
+    }
+
+    function testSetClientSmartContractRevertUnauthorized() public {
+        Client newClientSmartContract = new Client();
+        bytes32 adminRole = slaAllocator.DEFAULT_ADMIN_ROLE();
+        vm.prank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
+        );
+        slaAllocator.setClientSmartContract(newClientSmartContract);
+    }
 }
