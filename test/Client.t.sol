@@ -349,14 +349,16 @@ contract ClientTest is Test {
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
 
-        uint256 valueBefore = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
-        assertEq(valueBefore, 0);
+        Client.ClientDataUsage[] memory beforeTransfer = client.getSPClientsDataUsage(SP2);
+        assertEq(beforeTransfer.length, 0);
 
         vm.prank(clientAddress);
         client.transfer(transferParams);
 
-        uint256 valueAfter = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
-        assertEq(valueAfter, 4096);
+        Client.ClientDataUsage[] memory afterTransfer = client.getSPClientsDataUsage(SP2);
+        assertEq(afterTransfer.length, 1);
+        assertEq(afterTransfer[0].client, clientAddress);
+        assertEq(afterTransfer[0].usage, 4096);
     }
 
     function testSPClientsMappingUpdateForClaimExtension() public {
@@ -364,13 +366,15 @@ contract ClientTest is Test {
         client.increaseAllowance(clientAddress, SP2, 4096);
 
         transferParams.operator_data = hex"82808183194E20011A005034AC";
-        uint256 valueBefore = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
-        assertEq(valueBefore, 0);
+        Client.ClientDataUsage[] memory beforeTransfer = client.getSPClientsDataUsage(SP2);
+        assertEq(beforeTransfer.length, 0);
 
         vm.prank(clientAddress);
         client.transfer(transferParams);
 
-        uint256 valueAfter = client.getSPClients(CommonTypes.FilActorId.wrap(20000), clientAddress);
-        assertEq(valueAfter, 2048);
+        Client.ClientDataUsage[] memory afterTransfer = client.getSPClientsDataUsage(SP2);
+        assertEq(afterTransfer.length, 1);
+        assertEq(afterTransfer[0].client, clientAddress);
+        assertEq(afterTransfer[0].usage, 2048);
     }
 }

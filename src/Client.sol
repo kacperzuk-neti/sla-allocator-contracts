@@ -150,6 +150,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         CommonTypes.FilActorId claim;
     }
 
+    struct ClientDataUsage {
+        address client;
+        uint256 usage;
+    }
+
     /**
      * @notice Disabled constructor (proxy pattern)
      */
@@ -435,14 +440,21 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /**
-     * @notice Returns the total data usage (sum of allocations) of a specific client for a given provider.
-     * @param provider Address of the provider
-     * @param client Address of the client
-     * @return Sum of client allocations per SP
+     * @notice Returns the data usage of all clients for a given storage provider
+     * @param provider The FilActorId of the storage provider
+     * @return clientsDataUsage An array of ClientDataUsage structs containing client addresses and their data usage
      */
-    function getSPClients(CommonTypes.FilActorId provider, address client) public view returns (uint256) {
-        (bool exists, uint256 value) = EnumerableMap.tryGet(spClients[provider], client);
-        return exists ? value : 0;
+    function getSPClientsDataUsage(CommonTypes.FilActorId provider)
+        external
+        view
+        returns (ClientDataUsage[] memory clientsDataUsage)
+    {
+        uint256 clientCount = spClients[provider].length();
+        clientsDataUsage = new ClientDataUsage[](clientCount);
+        for (uint256 i = 0; i < clientCount; ++i) {
+            (address client, uint256 usage) = spClients[provider].at(i);
+            clientsDataUsage[i] = ClientDataUsage({client: client, usage: usage});
+        }
     }
 
     // solhint-disable no-empty-blocks
