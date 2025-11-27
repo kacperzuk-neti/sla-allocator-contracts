@@ -5,6 +5,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {SLIOracle} from "./SLIOracle.sol";
 
 /**
@@ -12,6 +13,11 @@ import {SLIOracle} from "./SLIOracle.sol";
  * @notice Upgradeable contract for managing SLA deals with role-based access control
  */
 contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    /**
+     * @notice Error emitted when a caller is not authorized for register SLA
+     */
+    error UnauthorizedCaller();
+
     /**
      * @notice Upgradable role which allows for contract upgrades
      */
@@ -90,6 +96,12 @@ contract SLARegistry is Initializable, AccessControlUpgradeable, UUPSUpgradeable
      * @param slaParams The SLA deal parameters
      */
     function registerSLA(address client, CommonTypes.FilActorId provider, SLAParams memory slaParams) external {
+        address caller = FilAddressIdConverter.normalize(msg.sender);
+
+        if (caller != client) {
+            revert UnauthorizedCaller();
+        }
+
         _checkSLARegistered(client, provider);
         slaParams.registered = true;
         slas[client][provider] = slaParams;

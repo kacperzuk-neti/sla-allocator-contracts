@@ -91,6 +91,12 @@ contract ActorIdMock {
             // datacap transfer
             return abi.encode(0, 0x51, hex"83410041004100");
         }
+        // if (target == 321 && methodNum == 3275365574) {
+        //     return abi.encode(0, 0x51, hex"824400A58B0140");
+        // }
+        if (target == 321 && methodNum == 3275365574) {
+            return abi.encode(0, 0x51, hex"824300C10240");
+        }
         revert MethodNotFound();
     }
 }

@@ -15,7 +15,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 
 import {Beneficiary} from "../src/Beneficiary.sol";
 import {SLAAllocator} from "../src/SLAAllocator.sol";
-import {GetBeneficiary} from "../src/libs/GetBeneficiary.sol";
+import {MinerUtils} from "../src/libs/MinerUtils.sol";
 
 import {MockProxy} from "./contracts/MockProxy.sol";
 import {MockSLAAllocator} from "./contracts/MockSLAAllocator.sol";
@@ -216,29 +216,29 @@ contract BeneficiaryTest is Test {
     }
 
     function testGetBeneficiaryForSP1() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP1);
+        MinerTypes.GetBeneficiaryReturn memory result = MinerUtils.getBeneficiary(SP1);
         assertEq(result.active.beneficiary.data, hex"00c2a101");
     }
 
     function testGetBeneficiaryForSP2() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP2);
+        MinerTypes.GetBeneficiaryReturn memory result = MinerUtils.getBeneficiary(SP2);
         assertEq(result.active.beneficiary.data, hex"00c2a101");
     }
 
     function testGetBeneficiaryForSP3() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP3);
+        MinerTypes.GetBeneficiaryReturn memory result = MinerUtils.getBeneficiary(SP3);
         assertEq(result.active.beneficiary.data, hex"00C2A101");
     }
 
     function testGetBeneficiaryPendingChangeForSP3() public view {
-        MinerTypes.GetBeneficiaryReturn memory result = GetBeneficiary.getBeneficiary(SP3);
+        MinerTypes.GetBeneficiaryReturn memory result = MinerUtils.getBeneficiary(SP3);
         assertEq(result.proposed.new_beneficiary.data, hex"00D4C101");
     }
 
     function testGetBeneficiaryWithChecksForSP7() public {
         beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(1022);
         mockBeneficiaryFactory.setInstance(SP7, beneficiaryEthAddressContract);
-        GetBeneficiary.getBeneficiaryWithChecks(SP7, mockBeneficiaryFactory, true, true, false);
+        MinerUtils.getBeneficiaryWithChecks(SP7, mockBeneficiaryFactory, true, true, false);
     }
 
     function testChangeBeneficiaryExpectRevertInvalidResponseLength() public {
