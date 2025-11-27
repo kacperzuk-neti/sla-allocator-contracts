@@ -68,6 +68,10 @@ interface SLAAllocator {
     }
 
     struct ManualAttestation {
+        bytes32 attestation_id;
+        address client;
+        FilActorId provider;
+        uint256 amount;
         string opaque_data;
     }
 
@@ -77,6 +81,7 @@ interface SLAAllocator {
     };
 
     struct PaymentTransaction {
+        bytes id;
         FilAddress from;
         FilAddress to;
         uint256 amount;
@@ -115,6 +120,8 @@ Expected storage items:
 ```
 address beneficiaryRegistry;
 address clientSmartContract;
+mapping(bytes32 id => bool isUsed) usedManualAttestations;
+mapping(bytes id => bool isUsed) usedTransactions;
 mapping(address client => mapping(address provider => address contract)) slaContracts;
 // FIXME rate limiting storage items
 // and items inherited from OpenZeppelin's AccessControl and UUPSUpgradeable
