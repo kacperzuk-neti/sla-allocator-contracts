@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Context} from "@openzeppelin/contracts/utils/Context.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Context} from "lib/openzeppelin-contracts/contracts/utils/Context.sol";
 
 /**
  * @title RateLimited
  * @notice Abstract contract for rate limiting
  */
-abstract contract RateLimited is Context, ReentrancyGuard {
+abstract contract RateLimited is Context {
     /**
      * @notice Global rate limit
      */
@@ -46,7 +45,7 @@ abstract contract RateLimited is Context, ReentrancyGuard {
     }
 
     /**
-     * @notice Constructor
+     * @notice Initializes the global rate limit
      */
     constructor() {
         _globalRateLimit = RateLimit({isGlobal: true, amount: 0, lastUpdate: block.timestamp});
@@ -62,12 +61,12 @@ abstract contract RateLimited is Context, ReentrancyGuard {
     error GlobalRateLimitExceeded(uint256 timeToReset);
 
     /**
-     * @notice Universal method to check rate limit (returns flag instead of revert)
+     * @notice Universal method to check rate limit
      * @param rl Reference to the RateLimit struct (storage)
-     * @return success True if limit OK (and updates amount), false if exceeded
-     * @return resetTime Time when limit resets (only if !success)
+     * @return success Flag indicating if the limit is exceeded
+     * @return resetTime Time when limit resets
      */
-    function _checkRateLimit(RateLimit storage rl) internal nonReentrant returns (bool success, uint256 resetTime) {
+    function _checkRateLimit(RateLimit storage rl) internal returns (bool success, uint256 resetTime) {
         uint256 windowTime = rl.isGlobal ? GLOBAL_RATE_LIMIT_TIME : CLIENT_RATE_LIMIT_TIME;
         uint8 maxAmount = rl.isGlobal ? GLOBAL_RATE_LIMIT : CLIENT_RATE_LIMIT;
         if (block.timestamp - rl.lastUpdate > windowTime) {
@@ -75,7 +74,7 @@ abstract contract RateLimited is Context, ReentrancyGuard {
             rl.lastUpdate = block.timestamp;
         }
 
-        if (rl.amount >= maxAmount) {
+        if (rl.amount == maxAmount) {
             return (false, rl.lastUpdate + windowTime);
         }
 
@@ -83,9 +82,10 @@ abstract contract RateLimited is Context, ReentrancyGuard {
     }
 
     /**
-     * @notice Modifier to check rate limits
+     * @notice Modifier to check rate limits for the client and global rate limits
+     * @dev If the client or global rate limit is exceeded, the function will revert
      */
-    function checkRateLimit() internal nonReentrant {
+    modifier rateLimited() {
         (bool clientSuccess, uint256 clientResetTime) = _checkRateLimit(_clientRateLimits[_msgSender()]);
         if (!clientSuccess) {
             revert ClientRateLimitExceeded(_msgSender(), clientResetTime);
@@ -96,10 +96,6 @@ abstract contract RateLimited is Context, ReentrancyGuard {
         }
         _globalRateLimit.amount++;
         _clientRateLimits[_msgSender()].amount++;
-    }
-
-    modifier rateLimited() {
-        checkRateLimit();
         _;
     }
 }
