@@ -176,6 +176,11 @@
         "name": "burnAddress_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "terminationOracle_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -301,6 +306,19 @@
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "terminationOracle",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"

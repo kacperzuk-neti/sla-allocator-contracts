@@ -21,6 +21,7 @@ contract BeneficiaryFactoryTest is Test {
     address public slaAllocator;
     address public withdrawer;
     address public burnAddress;
+    address public terminationOracle;
     CommonTypes.FilActorId public provider;
     BeneficiaryFactory public factoryImpl;
     bytes public initData;
@@ -31,11 +32,13 @@ contract BeneficiaryFactoryTest is Test {
         provider = CommonTypes.FilActorId.wrap(1);
         slaAllocator = vm.addr(101);
         burnAddress = vm.addr(102);
+        terminationOracle = vm.addr(103);
         beneficiaryImpl = address(new Beneficiary());
 
         factoryImpl = new BeneficiaryFactory();
         initData = abi.encodeCall(
-            BeneficiaryFactory.initialize, (admin, beneficiaryImpl, SLAAllocator(slaAllocator), burnAddress)
+            BeneficiaryFactory.initialize,
+            (admin, beneficiaryImpl, SLAAllocator(slaAllocator), burnAddress, terminationOracle)
         );
         factory = BeneficiaryFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
     }
@@ -84,7 +87,8 @@ contract BeneficiaryFactoryTest is Test {
             abi.encode(
                 address(factory.beacon()),
                 abi.encodeCall(
-                    Beneficiary.initialize, (admin_, withdrawer_, provider_, SLAAllocator(slaAllocator), burnAddress)
+                    Beneficiary.initialize,
+                    (admin_, withdrawer_, provider_, SLAAllocator(slaAllocator), burnAddress, terminationOracle)
                 )
             )
         );

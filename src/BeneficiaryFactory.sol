@@ -47,6 +47,11 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
     address public burnAddress;
 
     /**
+     * @notice Address of the Termination Oracle
+     */
+    address public terminationOracle;
+
+    /**
      * @notice Emitted when a new proxy is successfully created
      * @param proxy The address of the newly deployed proxy
      * @param provider The provider for which the proxy was created
@@ -68,11 +73,15 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param implementation The address of the initial Beneficiary implementation for the beacon
      * @param slaAllocator_ The address of the SLAAllocator
      * @param burnAddress_ The address of the burn address
+     * @param terminationOracle_ The address of the termination oracle
      */
-    function initialize(address admin, address implementation, SLAAllocator slaAllocator_, address burnAddress_)
-        external
-        initializer
-    {
+    function initialize(
+        address admin,
+        address implementation,
+        SLAAllocator slaAllocator_,
+        address burnAddress_,
+        address terminationOracle_
+    ) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -80,6 +89,7 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
         beacon = address(new UpgradeableBeacon(implementation, admin));
         slaAllocator = slaAllocator_;
         burnAddress = burnAddress_;
+        terminationOracle = terminationOracle_;
     }
 
     /**
@@ -100,7 +110,10 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
         bytes memory initCode = abi.encodePacked(
             type(BeaconProxy).creationCode,
             abi.encode(
-                beacon, abi.encodeCall(Beneficiary.initialize, (admin, withdrawer, provider, slaAllocator, burnAddress))
+                beacon,
+                abi.encodeCall(
+                    Beneficiary.initialize, (admin, withdrawer, provider, slaAllocator, burnAddress, terminationOracle)
+                )
             )
         );
 
