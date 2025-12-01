@@ -37,8 +37,8 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     struct Passport {
+        uint256 expirationTimestamp;
         address subject;
-        uint256 expiration_timestamp;
         uint64 score;
     }
 
@@ -48,11 +48,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     struct ManualAttestation {
-        bytes32 attestation_id;
+        bytes32 attestationId;
         address client;
         CommonTypes.FilActorId provider;
         uint256 amount;
-        string opaque_data;
+        string opaqueData;
     }
 
     struct ManualAttestationSigned {
@@ -95,12 +95,13 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Attestor role which allows sign attestations
      */
     bytes32 public constant ATTESTATOR_ROLE = keccak256("ATTESTATOR_ROLE");
-
+    
+    // solhint-disable gas-small-strings
     /**
      * @notice EIP-712 typehash for Passport struct
      */
     bytes32 private constant PASSPORT_TYPEHASH =
-        keccak256("Passport(address subject,uint256 expiration_timestamp,uint64 score)");
+        keccak256("Passport(address subject,uint256 expirationTimestamp,uint64 score)");
 
     /**
      * @notice EIP-712 typehash for PaymentTransaction struct
@@ -112,8 +113,9 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice EIP-712 typehash for ManualAttestation struct
      */
     bytes32 private constant MANUAL_ATTESTATION_TYPEHASH = keccak256(
-        "ManualAttestation(bytes32 attestation_id,address client,uint64 provider,uint256 amount,string opaque_data)"
+        "ManualAttestation(bytes32 attestationId,address client,uint64 provider,uint256 amount,string opaqueData)"
     );
+    // solhint-enable gas-small-strings
 
     // solhint-disable gas-indexed-events
     /**
@@ -368,7 +370,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @return Hash of the struct
      */
     function _hashPassport(Passport calldata passport) internal pure returns (bytes32) {
-        return keccak256(abi.encode(PASSPORT_TYPEHASH, passport.subject, passport.expiration_timestamp, passport.score));
+        return keccak256(abi.encode(
+            PASSPORT_TYPEHASH,
+            passport.subject,
+            passport.expiration_timestamp,
+            passport.score
+        ));
     }
 
     /**
@@ -382,8 +389,14 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         uint64 resolvedTo = PrecompilesAPI.resolveAddress(txn.to);
         address fromHash = FilAddressIdConverter.toAddress(resolvedFrom);
         address toHash = FilAddressIdConverter.toAddress(resolvedTo);
-
-        return keccak256(abi.encode(PAYMENT_TX_TYPEHASH, idHash, fromHash, toHash, txn.amount));
+    
+        return keccak256(abi.encode(
+            PAYMENT_TX_TYPEHASH,
+            idHash,
+            fromHash,
+            toHash,
+            txn.amount
+        ));
     }
 
     /**
@@ -393,16 +406,14 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     function _hashManualAttestation(ManualAttestation calldata attestation) internal pure returns (bytes32) {
         uint64 providerUnwrapped = CommonTypes.FilActorId.unwrap(attestation.provider);
-        return keccak256(
-            abi.encode(
-                MANUAL_ATTESTATION_TYPEHASH,
-                attestation.attestation_id,
-                attestation.client,
-                providerUnwrapped,
-                attestation.amount,
-                keccak256(bytes(attestation.opaque_data))
-            )
-        );
+        return keccak256(abi.encode(
+            MANUAL_ATTESTATION_TYPEHASH,
+            attestation.attestation_id,
+            attestation.client,
+            providerUnwrapped,
+            attestation.amount,
+            keccak256(bytes(attestation.opaque_data))
+        ));
     }
 
     /**
