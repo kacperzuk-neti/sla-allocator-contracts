@@ -367,13 +367,8 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param passport Passport struct
      * @return Hash of the struct
      */
-    function _hashPassport(Passport calldata passport) internal view returns (bytes32) {
-        return keccak256(abi.encode(
-            PASSPORT_TYPEHASH,
-            passport.subject,
-            passport.expiration_timestamp,
-            passport.score
-        ));
+    function _hashPassport(Passport calldata passport) internal pure returns (bytes32) {
+        return keccak256(abi.encode(PASSPORT_TYPEHASH, passport.subject, passport.expiration_timestamp, passport.score));
     }
 
     /**
@@ -387,14 +382,8 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         uint64 resolvedTo = PrecompilesAPI.resolveAddress(txn.to);
         address fromHash = FilAddressIdConverter.toAddress(resolvedFrom);
         address toHash = FilAddressIdConverter.toAddress(resolvedTo);
-    
-        return keccak256(abi.encode(
-            PAYMENT_TX_TYPEHASH,
-            idHash,
-            fromHash,
-            toHash,
-            txn.amount
-        ));
+
+        return keccak256(abi.encode(PAYMENT_TX_TYPEHASH, idHash, fromHash, toHash, txn.amount));
     }
 
     /**
@@ -402,16 +391,18 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param attestation ManualAttestation struct
      * @return Hash of the struct
      */
-    function _hashManualAttestation(ManualAttestation calldata attestation) internal view returns (bytes32) {
+    function _hashManualAttestation(ManualAttestation calldata attestation) internal pure returns (bytes32) {
         uint64 providerUnwrapped = CommonTypes.FilActorId.unwrap(attestation.provider);
-        return keccak256(abi.encode(
-            MANUAL_ATTESTATION_TYPEHASH,
-            attestation.attestation_id,
-            attestation.client,
-            providerUnwrapped,
-            attestation.amount,
-            keccak256(bytes(attestation.opaque_data))
-        ));
+        return keccak256(
+            abi.encode(
+                MANUAL_ATTESTATION_TYPEHASH,
+                attestation.attestation_id,
+                attestation.client,
+                providerUnwrapped,
+                attestation.amount,
+                keccak256(bytes(attestation.opaque_data))
+            )
+        );
     }
 
     /**
