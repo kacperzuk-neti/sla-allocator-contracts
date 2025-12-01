@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -20,6 +21,8 @@ import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
  * @notice Upgradeable contract for managing client allowances with role-based access control
  */
 contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using EnumerableMap for EnumerableMap.AddressToUintMap;
+
     /**
      * @notice Allocator role which allows for increasing and decreasing allowances
      */
@@ -41,6 +44,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @notice Mapping of allowances for clients and providers using FilActorId
      */
     mapping(address client => mapping(CommonTypes.FilActorId provider => uint256 amount)) public allowances;
+
+    /**
+     * @notice Mapping of storage providers to their clients and their data usage
+     */
+    mapping(CommonTypes.FilActorId provider => EnumerableMap.AddressToUintMap client) private spClients;
 
     /**
      * @notice  Precision factor for DataCap tokens (1e18)
@@ -140,6 +148,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     struct ProviderClaim {
         CommonTypes.FilActorId provider;
         CommonTypes.FilActorId claim;
+    }
+
+    struct ClientDataUsage {
+        address client;
+        uint256 usage;
     }
 
     /**
@@ -244,6 +257,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][alloc.provider] -= size;
+            (, uint256 prevSize) = spClients[alloc.provider].tryGet(msg.sender);
+            spClients[alloc.provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -308,6 +323,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][provider] -= size;
+            (, uint256 prevSize) = spClients[provider].tryGet(msg.sender);
+            spClients[provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -420,6 +437,24 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     function setBeneficiaryFactory(BeneficiaryFactory newBeneficiaryFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
         beneficiaryFactory = newBeneficiaryFactory;
+    }
+
+    /**
+     * @notice Returns the data usage of all clients for a given storage provider
+     * @param provider The FilActorId of the storage provider
+     * @return clientsDataUsage An array of ClientDataUsage structs containing client addresses and their data usage
+     */
+    function getSPClientsDataUsage(CommonTypes.FilActorId provider)
+        external
+        view
+        returns (ClientDataUsage[] memory clientsDataUsage)
+    {
+        uint256 clientCount = spClients[provider].length();
+        clientsDataUsage = new ClientDataUsage[](clientCount);
+        for (uint256 i = 0; i < clientCount; ++i) {
+            (address client, uint256 usage) = spClients[provider].at(i);
+            clientsDataUsage[i] = ClientDataUsage({client: client, usage: usage});
+        }
     }
 
     // solhint-disable no-empty-blocks
