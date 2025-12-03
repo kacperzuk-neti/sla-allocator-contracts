@@ -348,4 +348,20 @@ contract BeneficiaryTest is Test {
             CommonTypes.FilActorId.wrap(20000), FilAddresses.fromBytes(hex"00fb07"), 1000, 6000000
         );
     }
+
+    function testAcceptBeneficiaryExpectRevertInvalidNewBeneficiary() public {
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.InvalidNewBeneficiary.selector, 1, 2));
+        beneficiary.acceptBeneficiary(SP1);
+    }
+
+    function testAcceptBeneficiaryExpectRevertExitCodeError() public {
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.ExitCodeError.selector));
+        beneficiary.acceptBeneficiary(SP1);
+    }
+
+    function testAcceptBeneficiaryEmitEvent() public {
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.BeneficiaryAccepted(SP1);
+        beneficiary.acceptBeneficiary(SP1);
+    }
 }
