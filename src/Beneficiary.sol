@@ -7,9 +7,14 @@ import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
+import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
+import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
+import {MinerUtils} from "./libs/MinerUtils.sol";
+import {Utils} from "./libs/Utils.sol";
+
 /**
  * @title Beneficiary
  * @notice Upgradeable contract for managing beneficiaries with role-based access control
@@ -86,6 +91,12 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         uint256 newQuota,
         int64 newExpirationChainEpoch
     );
+
+    /**
+     * @notice Emitted when beneficiary is accepted
+     * @param minerID The miner actor id to accept the beneficiary for
+     */
+    event BeneficiaryAccepted(CommonTypes.FilActorId indexed minerID);
 
     /**
      * @notice Error thrown when the FVM call returns a non-zero exit code.
@@ -237,6 +248,29 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         for (uint256 i = 0; i < claims.length; i++) {
             terminatedClaims[claims[i]] = true;
         }
+    }
+
+     * @notice Accepts a pending beneficiary change proposal for this contract on the miner actor.
+     * @param minerId The miner actor id to accept the beneficiary change for
+     * @dev Anyone can call this function. It:
+     *      - Uses MinerUtils to fetch and validate the current pending beneficiary proposal for `minerId`.
+     *      - Calls MinerAPI.changeBeneficiary with the proposed parameters to accept the change.
+     *      Reverts if any of the checks fail or if the miner call returns a non-zero exit code.
+     */
+    function acceptBeneficiary(CommonTypes.FilActorId minerId) external {
+        MinerTypes.GetBeneficiaryReturn memory pendingBeneficiary =
+            MinerUtils.getBeneficiaryWithChecksForProposedBeneficiary(minerId, address(this), true, true, true);
+
+        int256 exitCode = MinerAPI.changeBeneficiary(
+            minerId,
+            MinerTypes.ChangeBeneficiaryParams({
+                new_beneficiary: pendingBeneficiary.proposed.new_beneficiary,
+                new_quota: pendingBeneficiary.proposed.new_quota,
+                new_expiration: pendingBeneficiary.proposed.new_expiration
+            })
+        );
+        if (exitCode != 0) revert ExitCodeError(exitCode);
+        emit BeneficiaryAccepted(minerId);
     }
 
     // solhint-disable-next-line use-natspec
