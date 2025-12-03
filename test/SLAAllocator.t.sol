@@ -27,11 +27,13 @@ import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
 import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
+import {VerifySignaturesHelper} from "../test/contracts/VerifySignaturesHelper.sol";
 
 // solhint-disable-next-line max-states-count
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
     MockSLARegistry public slaRegistry;
+    VerifySignaturesHelper public verifySignaturesHelper;
     Client public clientSmartContract;
     SLAAllocator.SLA[] public slas;
     ActorIdMock public actorIdMock;
@@ -53,7 +55,10 @@ contract SLAAllocatorTest is Test {
 
     address public admin = vm.addr(1);
     address public manager = vm.addr(2);
-    address public unauthorized = vm.addr(5);
+    uint256 public unauthorizedKey = 0xBBB;
+    address public unauthorized = vm.addr(unauthorizedKey);
+    uint256 public attestorKey = 0xAAA;
+    address public attestor = vm.addr(attestorKey);
 
     function setUp() public {
         actorIdMock = new ActorIdMock();
@@ -68,10 +73,13 @@ contract SLAAllocatorTest is Test {
         vm.etch(CALL_ACTOR_ID, address(actorIdMock).code);
         vm.etch(address(5555), address(actorIdProxy).code);
         SLAAllocator impl = new SLAAllocator();
-        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (admin, manager));
+        VerifySignaturesHelper impl2 = new VerifySignaturesHelper();
+        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (admin, manager, attestor));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
+        ERC1967Proxy proxyHelper = new ERC1967Proxy(address(impl2), initData);
         slaAllocator = SLAAllocator(address(proxy));
         slaAllocator.initialize2(clientSmartContract, mockBeneficiaryFactory);
+        verifySignaturesHelper = VerifySignaturesHelper(address(proxyHelper));
 
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
     }
@@ -198,7 +206,7 @@ contract SLAAllocatorTest is Test {
 
     function testCantBeReinitialized() public {
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
-        slaAllocator.initialize(address(2), address(2));
+        slaAllocator.initialize(address(2), address(2), address(3));
 
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
         slaAllocator.initialize2(Client(address(2)), BeneficiaryFactory(address(1)));
@@ -349,5 +357,68 @@ contract SLAAllocatorTest is Test {
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
         );
         slaAllocator.setClientSmartContract(newClientSmartContract);
+    }
+
+    function testVerifyPassportSigned() public view {
+        assertTrue(verifySignaturesHelper.hasRole(verifySignaturesHelper.ATTESTATOR_ROLE(), attestor));
+
+        SLAAllocator.Passport memory passport =
+            SLAAllocator.Passport({expirationTimestamp: block.timestamp + 1 days, subject: address(0x123), score: 100});
+
+        bytes32 structHash = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        SLAAllocator.Signature memory sig = SLAAllocator.Signature(v, r, s);
+        SLAAllocator.PassportSigned memory signed = SLAAllocator.PassportSigned(passport, sig);
+        address recovered = verifySignaturesHelper.recoverFromSigExt(structHash, sig);
+        assertEq(recovered, attestor);
+        bool verified = verifySignaturesHelper.verifyPassportSignedExt(signed);
+        assertTrue(verified, "expected passport signature");
+    }
+
+    function testVerifyPaymentTransactionSignature() public view {
+        assertTrue(verifySignaturesHelper.hasRole(verifySignaturesHelper.ATTESTATOR_ROLE(), attestor));
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        SLAAllocator.Signature memory sig = SLAAllocator.Signature(v, r, s);
+        SLAAllocator.PaymentTransactionSigned memory signed = SLAAllocator.PaymentTransactionSigned(txn, sig);
+        address recovered = verifySignaturesHelper.recoverFromSigExt(structHash, sig);
+        assertEq(recovered, attestor);
+        bool verified = verifySignaturesHelper.verifyPaymentTransactionSignedExt(signed);
+        assertTrue(verified, "expected payment txn signature");
+    }
+
+    function testVerifyManualAttestationSignature() public view {
+        assertTrue(verifySignaturesHelper.hasRole(verifySignaturesHelper.ATTESTATOR_ROLE(), attestor));
+
+        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
+            attestationId: keccak256(abi.encodePacked("1")),
+            client: vm.addr(0x123),
+            provider: SP1,
+            amount: 1,
+            opaqueData: "data"
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        SLAAllocator.Signature memory sig = SLAAllocator.Signature(v, r, s);
+        SLAAllocator.ManualAttestationSigned memory signed = SLAAllocator.ManualAttestationSigned(attestation, sig);
+        address recovered = verifySignaturesHelper.recoverFromSigExt(structHash, sig);
+        assertEq(recovered, attestor);
+        bool verified = verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
+        assertTrue(verified, "expected manual att signature");
     }
 }

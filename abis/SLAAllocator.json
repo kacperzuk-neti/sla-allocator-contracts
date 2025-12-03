@@ -238,6 +238,11 @@
         "name": "manager",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "attestor",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
