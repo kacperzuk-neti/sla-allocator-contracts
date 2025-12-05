@@ -7,13 +7,10 @@ import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
-import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
-import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
 import {MinerUtils} from "./libs/MinerUtils.sol";
-import {Utils} from "./libs/Utils.sol";
 
 /**
  * @title Beneficiary

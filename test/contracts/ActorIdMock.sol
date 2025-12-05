@@ -128,7 +128,7 @@ contract ActorIdMock {
 //      ActiveBeneficiary active; beneficiary = null term { quota: 0, used_quota: 0, expiration: 0 }
 //      PendingBeneficiaryChange proposed; = null
 
-// SP5 - 50000 - 82824400C2A101834E0002863C1F5CDAE42F95400000004D00A18F07D736B90BE5500000001A005B8D80854400D4C1014E000278EF7C9A6BF689E106F000011A006ACFC0F5F4
+// SP5 - 50000 - 82824400C2A101834201FF410A1A005B8D80854400D4C1014207D01A006ACFC0F5F4
 // GetBeneficiaryReturn {
 //      ActiveBeneficiary active; beneficiary = f023551 term { quota: -255, used_quota: 10, expiration: 6000000 }
 //      PendingBeneficiaryChange proposed; = { beneficiary = f024788, new_quota: 2000, new_expiration: 7000000, approved_by_beneficiary: true, approved_by_nominee: false } }

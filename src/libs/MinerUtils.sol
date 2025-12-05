@@ -8,7 +8,6 @@ import {Utils} from "./Utils.sol";
 import {BeneficiaryFactory} from "../BeneficiaryFactory.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
-import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 
 /**
  * @title MinerUtils
