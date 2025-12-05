@@ -70,5 +70,39 @@
     "type": "error",
     "name": "QuotaNotUnlimited",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaNotUnlimited2",
+    "inputs": [
+      {
+        "name": "quota",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minQuota",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TestError",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "tuple",
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ]
   }
 ]

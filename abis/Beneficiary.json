@@ -388,6 +388,19 @@
         "type": "uint64",
         "indexed": true,
         "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "newBeneficiary",
+        "type": "tuple",
+        "indexed": true,
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
       }
     ],
     "anonymous": false
@@ -620,11 +633,6 @@
   },
   {
     "type": "error",
-    "name": "ExpirationBelowFiveYears",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "FailToCallActor",
     "inputs": []
   },
@@ -730,13 +738,19 @@
   },
   {
     "type": "error",
-    "name": "QuotaCannotBeNegative",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "QuotaNotUnlimited",
-    "inputs": []
+    "name": "QuotaNotUnlimited2",
+    "inputs": [
+      {
+        "name": "quota",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minQuota",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
