@@ -74,7 +74,8 @@ contract BeneficiaryTest is Test {
         vm.etch(address(5555), address(actorIdMock).code);
         vm.etch(address(6666), address(actorAddressMock).code);
         vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
-        resolveAddress.setId(uint64(1022));
+        resolveAddress.setId(address(this), uint64(1022));
+        resolveAddressPrecompileMock.setId(address(9999), uint64(1023));
 
         earlyTerminatedClaims.push(1);
         beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator, burnAddress, terminationOracle);
@@ -280,6 +281,7 @@ contract BeneficiaryTest is Test {
     }
 
     function testGetBeneficiaryWithChecksForSP7() public {
+        resolveAddress.setAddress(hex"00FE07", uint64(1022));
         beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(1022);
         mockBeneficiaryFactory.setInstance(SP7, beneficiaryEthAddressContract);
         MinerUtils.getBeneficiaryWithChecks(SP7, mockBeneficiaryFactory, true, true, false);
@@ -349,19 +351,31 @@ contract BeneficiaryTest is Test {
         );
     }
 
-    function testAcceptBeneficiaryExpectRevertInvalidNewBeneficiary() public {
-        vm.expectRevert(abi.encodeWithSelector(MinerUtils.InvalidNewBeneficiary.selector, 1, 2));
-        beneficiary.acceptBeneficiary(SP1);
+    function testAcceptBeneficiaryRevertsWhenNoPendingChange() public {
+        vm.expectRevert(MinerUtils.NoNewBeneficiarySet.selector);
+        beneficiary.acceptBeneficiary(SP7);
     }
 
-    function testAcceptBeneficiaryExpectRevertExitCodeError() public {
-        vm.expectRevert(abi.encodeWithSelector(MinerUtils.ExitCodeError.selector));
-        beneficiary.acceptBeneficiary(SP1);
+    function testAcceptBeneficiaryRevertsWhenNewBeneficiaryIsNotThisContract() public {
+        resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00D4C101", uint64(9999));
+
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.InvalidNewBeneficiary.selector, 1023, 9999));
+        beneficiary.acceptBeneficiary(SP3);
     }
 
-    function testAcceptBeneficiaryEmitEvent() public {
+    function shouldAcceptBeneficiary() public {
+        resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00D4C101", uint64(1023));
         vm.expectEmit(true, true, true, true);
-        emit Beneficiary.BeneficiaryAccepted(SP1);
-        beneficiary.acceptBeneficiary(SP1);
+        emit Beneficiary.BeneficiaryAccepted(SP3, FilAddresses.fromBytes(hex"00fb07"));
+        beneficiary.acceptBeneficiary(SP3);
+    }
+
+    function testAcceptBeneficiaryCallableByAnyone() public {
+        address randomCaller = address(0x1234);
+        vm.prank(randomCaller);
+        vm.expectRevert(MinerUtils.NoNewBeneficiarySet.selector);
+        beneficiary.acceptBeneficiary(SP7);
     }
 }

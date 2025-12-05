@@ -95,8 +95,9 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     /**
      * @notice Emitted when beneficiary is accepted
      * @param minerID The miner actor id to accept the beneficiary for
+     * @param newBeneficiary The new beneficiary FilAddress
      */
-    event BeneficiaryAccepted(CommonTypes.FilActorId indexed minerID);
+    event BeneficiaryAccepted(CommonTypes.FilActorId indexed minerID, CommonTypes.FilAddress indexed newBeneficiary);
 
     /**
      * @notice Error thrown when the FVM call returns a non-zero exit code.
@@ -255,12 +256,13 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @dev Anyone can call this function. It:
      *      - Uses MinerUtils to fetch and validate the current pending beneficiary proposal for `minerId`.
      *      - Calls MinerAPI.changeBeneficiary with the proposed parameters to accept the change.
-     *      Reverts if any of the checks fail or if the miner call returns a non-zero exit code.
+     *      - Reverts with ExitCodeError if the actor call returns a non-zero exit code.
      */
     function acceptBeneficiary(CommonTypes.FilActorId minerId) external {
         MinerTypes.GetBeneficiaryReturn memory pendingBeneficiary =
-            MinerUtils.getBeneficiaryWithChecksForProposedBeneficiary(minerId, address(this), true, true, true);
+            MinerUtils.getBeneficiaryWithChecksForProposed(minerId, address(this));
 
+        emit BeneficiaryAccepted(minerId, pendingBeneficiary.proposed.new_beneficiary);
         int256 exitCode = MinerAPI.changeBeneficiary(
             minerId,
             MinerTypes.ChangeBeneficiaryParams({
@@ -269,8 +271,9 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
                 new_expiration: pendingBeneficiary.proposed.new_expiration
             })
         );
-        if (exitCode != 0) revert ExitCodeError(exitCode);
-        emit BeneficiaryAccepted(minerId);
+        if (exitCode != 0) {
+            revert ExitCodeError(exitCode);
+        }
     }
 
     // solhint-disable-next-line use-natspec

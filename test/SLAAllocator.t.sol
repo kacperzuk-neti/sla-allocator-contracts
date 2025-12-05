@@ -98,7 +98,8 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapExpirationBelowFiveYearsRevert() public {
-        resolveAddress.setId(uint64(10000));
+        resolveAddress.setId(address(this), uint64(10000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(10000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(10000);
         mockBeneficiaryFactory.setInstance(SP1, beneficiaryEthAddressContract);
         slas[0].provider = SP1;
@@ -113,7 +114,8 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapQuotaCannotBeNegativeRevert() public {
-        resolveAddress.setId(uint64(50000));
+        resolveAddress.setId(address(this), uint64(50000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(50000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
         mockBeneficiaryFactory.setInstance(SP5, beneficiaryEthAddressContract);
         slas[0].provider = SP5;
@@ -122,7 +124,8 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapSucceed() public {
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
@@ -136,7 +139,8 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapQuotaNotUnlimitedRevert() public {
-        resolveAddress.setId(uint64(60000));
+        resolveAddress.setId(address(this), uint64(60000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(60000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(60000);
         mockBeneficiaryFactory.setInstance(SP6, beneficiaryEthAddressContract);
         slas[0].provider = SP6;
@@ -145,13 +149,15 @@ contract SLAAllocatorTest is Test {
     }
 
     function testRequestDataCapSingleClientPerSP() public {
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
         slaAllocator.requestDataCap(slas, 1);
 
-        resolveAddress.setId(uint64(50000));
+        resolveAddress.setId(address(this), uint64(50000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(50000));
         beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         vm.prank(vm.addr(5));
@@ -163,14 +169,16 @@ contract SLAAllocatorTest is Test {
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
-        resolveAddress.setId(uint64(50000));
+        resolveAddress.setId(address(this), uint64(50000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(50000));
         beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(50000);
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.InvalidBeneficiary.selector, 50000, 20000));
         slaAllocator.requestDataCap(slas, 1);
     }
 
     function testRequestDataCapSameClientPerSPTwice() public {
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;
@@ -254,7 +262,8 @@ contract SLAAllocatorTest is Test {
     }
 
     function testGetProvidersReturnsAddedProviders() public {
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         slas[0].provider = SP2;

@@ -84,7 +84,8 @@ contract ClientTest is Test {
 
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
     }
 
     function testIsAdminSet() public view {

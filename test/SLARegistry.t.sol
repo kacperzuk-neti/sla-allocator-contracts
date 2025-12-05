@@ -140,7 +140,7 @@ contract SLARegistryTest is Test {
     }
 
     function testSLARegistryExpectRevertUnauthorizedCaller() public {
-        resolveAddress.setId(CommonTypes.FilActorId.unwrap(provider));
+        resolveAddress.setId(address(this), CommonTypes.FilActorId.unwrap(provider));
         vm.etch(address(5555), address(actorIdUnauthorizedCallerFailingMock).code);
         vm.expectRevert(abi.encodeWithSelector(SLARegistry.UnauthorizedCaller.selector));
         slaRegistry.registerSLA(client, provider, slaParams);
