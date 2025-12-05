@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 // solhint-disable use-natspec
-// solhint-disable func-visibility
-// solhint-disable contract-name-camelcase
 // solhint-disable gas-strict-inequalities
 pragma solidity ^0.8.24;
 
@@ -13,8 +11,8 @@ import {RateLimited} from "../src/RateLimited.sol";
 contract RateLimitedTest is Test {
     RateLimitedContract public testContract;
 
-    address public user1 = address(0x123);
-    address public user2 = address(0x456);
+    address public user1 = vm.addr(0x123);
+    address public user2 = vm.addr(0x456);
 
     function setUp() public {
         testContract = new RateLimitedContract();
@@ -38,13 +36,13 @@ contract RateLimitedTest is Test {
 
     function testGlobalLimitExceeded() public {
         for (uint256 i = 1; i <= testContract.GLOBAL_RATE_LIMIT(); i++) {
-            address user = address(uint160(i));
+            address user = vm.addr(i);
             vm.prank(user);
             testContract.performAction();
         }
 
         vm.expectRevert(abi.encodeWithSelector(RateLimited.GlobalRateLimitExceeded.selector, block.timestamp + 1 days));
-        vm.prank(address(6));
+        vm.prank(vm.addr(6));
         testContract.performAction();
     }
 
@@ -60,14 +58,14 @@ contract RateLimitedTest is Test {
 
     function testGlobalResetAfterWindow() public {
         for (uint256 i = 1; i <= testContract.GLOBAL_RATE_LIMIT(); i++) {
-            address user = address(uint160(i));
+            address user = vm.addr(i);
             vm.prank(user);
             testContract.performAction();
         }
 
         vm.warp(block.timestamp + 1 days + 1);
 
-        vm.prank(address(6));
+        vm.prank(vm.addr(6));
         testContract.performAction();
     }
 }
