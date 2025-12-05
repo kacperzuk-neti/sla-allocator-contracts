@@ -23,6 +23,7 @@ import {ActorAddressMock} from "./contracts/ActorAddressMock.sol";
 import {ActorIdMock} from "./contracts/ActorIdMock.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
+import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
 import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
 
 // solhint-disable-next-line max-states-count
@@ -47,13 +48,16 @@ contract BeneficiaryTest is Test {
     CommonTypes.FilActorId public SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
     CommonTypes.FilActorId public SP2 = CommonTypes.FilActorId.wrap(uint64(20000));
     CommonTypes.FilActorId public SP3 = CommonTypes.FilActorId.wrap(uint64(30000));
+    CommonTypes.FilActorId public SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
     CommonTypes.FilActorId public SP7 = CommonTypes.FilActorId.wrap(uint64(70000));
+    CommonTypes.FilActorId public SP8 = CommonTypes.FilActorId.wrap(uint64(80000));
     CommonTypes.FilActorId public beneficiaryContractId = CommonTypes.FilActorId.wrap(uint64(1022));
 
     CommonTypes.FilAddress public SP1Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP1));
     CommonTypes.FilAddress public SP2Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP2));
     CommonTypes.FilAddress public SP3Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP3));
     CommonTypes.FilAddress public SP7Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP7));
+    CommonTypes.FilAddress public SP8Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP8));
     CommonTypes.FilAddress public beneficiaryContractAddress =
         FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(beneficiaryContractId));
     address public beneficiaryEthAddressContract;
@@ -377,5 +381,27 @@ contract BeneficiaryTest is Test {
         vm.prank(randomCaller);
         vm.expectRevert(MinerUtils.NoNewBeneficiarySet.selector);
         beneficiary.acceptBeneficiary(SP7);
+    }
+
+    function testShouldRevertAcceptWhenChangeReverts() public {
+        resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00D4C101", uint64(1023));
+        vm.expectRevert(abi.encodeWithSelector(Beneficiary.ExitCodeError.selector, 1));
+        beneficiary.acceptBeneficiary(SP8);
+    }
+
+    function testShouldRevertAcceptWhenQuotaIsNotUnlimited() public {
+        resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00D4C101", uint64(1023));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.QuotaNotUnlimited.selector));
+        beneficiary.acceptBeneficiary(SP5);
+    }
+
+    function testShouldRevertWhenGetActorResolvesWithFalse() public {
+        ResolveAddressPrecompileFailingMock failingResolveAddress =
+            ResolveAddressPrecompileFailingMock(payable(0xFE00000000000000000000000000000000000001));
+        vm.etch(address(failingResolveAddress), address(failingResolveAddress).code);
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.FailedToGetActorID.selector));
+        beneficiary.acceptBeneficiary(SP3);
     }
 }

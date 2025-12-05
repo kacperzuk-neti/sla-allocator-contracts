@@ -20,12 +20,10 @@ library MinerUtils {
     error QuotaCannotBeNegative();
     error ExpirationBelowFiveYears();
     error QuotaNotUnlimited();
-    error QuotaNotUnlimited2(uint256 quota, uint256 minQuota);
     error InvalidBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
     error InvalidNewBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
     error BeneficiaryInstanceNonexistent();
     error FailedToGetActorID();
-    error TestError(CommonTypes.FilAddress beneficiary);
     /**
      * @notice Expiration time of 5 years in Filecoin epochs (assuming 30s epochs)
      * @dev 5 years = 5 * 365 * 24 * 60 * 60 seconds / 30 seconds per epoch = 5,256,000 epochs
@@ -158,7 +156,7 @@ library MinerUtils {
         }
 
         (uint256 newQuota,) = Utils.bigIntToUint256(beneficiaryData.proposed.new_quota);
-        if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited2(newQuota, MIN_BENEFICIARY_QUOTA);
+        if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
 
         return beneficiaryData;
     }

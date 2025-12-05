@@ -738,19 +738,8 @@
   },
   {
     "type": "error",
-    "name": "QuotaNotUnlimited2",
-    "inputs": [
-      {
-        "name": "quota",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minQuota",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
+    "name": "QuotaNotUnlimited",
+    "inputs": []
   },
   {
     "type": "error",

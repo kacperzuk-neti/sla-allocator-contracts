@@ -4,6 +4,8 @@
 pragma solidity 0.8.25;
 
 contract ResolveAddressPrecompileMock {
+    error ErrorExitCode();
+
     mapping(address client => uint64 id) public addressToId;
     mapping(bytes filAddressData => uint64 id) public filAddressToId;
 
@@ -24,9 +26,13 @@ contract ResolveAddressPrecompileMock {
             clientAddress := shr(96, tmp)
         }
         uint64 id = addressToId[clientAddress];
-        
+
         if (id == 0) {
             id = filAddressToId[data];
+        }
+
+        if (id == 0) {
+            revert ErrorExitCode();
         }
 
         return abi.encode(id);
