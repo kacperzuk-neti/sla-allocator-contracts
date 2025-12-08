@@ -20,53 +20,56 @@ contract RateLimitedTest is Test {
 
     function testInitialCallSuccess() public {
         vm.prank(user1);
-        testContract.performAction();
+        vm.expectEmit(true, true, true, true);
+
+        emit RateLimitedContract.ActionPerformed();
+        testContract.performClientAction();
     }
 
     function testClientLimitExceeded() public {
         vm.prank(user1);
-        testContract.performAction();
+        testContract.performClientAction();
 
         uint256 expectedResetTime = block.timestamp + testContract.CLIENT_RATE_LIMIT_TIME() - 1 seconds;
 
         vm.expectRevert(abi.encodeWithSelector(RateLimited.ClientRateLimitExceeded.selector, user1, expectedResetTime));
         vm.prank(user1);
-        testContract.performAction();
+        testContract.performClientAction();
     }
 
     function testGlobalLimitExceeded() public {
         for (uint256 i = 1; i <= testContract.GLOBAL_RATE_LIMIT(); i++) {
             address user = vm.addr(i);
             vm.prank(user);
-            testContract.performAction();
+            testContract.performGlobalAction();
         }
 
         vm.expectRevert(abi.encodeWithSelector(RateLimited.GlobalRateLimitExceeded.selector, block.timestamp + 1 days));
         vm.prank(vm.addr(6));
-        testContract.performAction();
+        testContract.performGlobalAction();
     }
 
     function testClientResetAfterWindow() public {
         vm.prank(user1);
-        testContract.performAction();
+        testContract.performClientAction();
 
         vm.warp(block.timestamp + 1 weeks + 1);
 
         vm.prank(user1);
-        testContract.performAction();
+        testContract.performClientAction();
     }
 
     function testGlobalResetAfterWindow() public {
         for (uint256 i = 1; i <= testContract.GLOBAL_RATE_LIMIT(); i++) {
             address user = vm.addr(i);
             vm.prank(user);
-            testContract.performAction();
+            testContract.performGlobalAction();
         }
 
         vm.warp(block.timestamp + 1 days + 1);
 
         vm.prank(vm.addr(6));
-        testContract.performAction();
+        testContract.performGlobalAction();
     }
 }
 

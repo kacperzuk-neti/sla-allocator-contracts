@@ -8,7 +8,13 @@ import {RateLimited} from "../../src/RateLimited.sol";
 contract RateLimitedContract is RateLimited {
     event ActionPerformed();
 
-    function performAction() external rateLimited {
+    function performClientAction() external clientRateLimited {
+        // solhint-disable-next-line
+        msg.sender.call{value: 0}("");
+        emit ActionPerformed();
+    }
+
+    function performGlobalAction() external globallyRateLimited {
         // solhint-disable-next-line
         msg.sender.call{value: 0}("");
         emit ActionPerformed();

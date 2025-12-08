@@ -7,7 +7,7 @@ import {Context} from "lib/openzeppelin-contracts/contracts/utils/Context.sol";
  * @title RateLimited
  * @notice Abstract contract for rate limiting
  */
-abstract contract RateLimited is Context {
+abstract contract RateLimited {
     /**
      * @notice Global rate limit
      */
@@ -55,6 +55,7 @@ abstract contract RateLimited is Context {
      * @notice Error emitted when the client rate limit is exceeded
      */
     error ClientRateLimitExceeded(address client, uint256 timeToReset);
+
     /**
      * @notice Error emitted when the global rate limit is exceeded
      */
@@ -78,24 +79,23 @@ abstract contract RateLimited is Context {
             return (false, rl.lastUpdate + windowTime);
         }
 
+        rl.amount++;
         return (true, 0);
     }
 
-    /**
-     * @notice Modifier to check rate limits for the client and global rate limits
-     * @dev If the client or global rate limit is exceeded, the function will revert
-     */
-    modifier rateLimited() {
-        (bool clientSuccess, uint256 clientResetTime) = _checkRateLimit(_clientRateLimits[_msgSender()]);
-        if (!clientSuccess) {
-            revert ClientRateLimitExceeded(_msgSender(), clientResetTime);
+    modifier globallyRateLimited() {
+        (bool success, uint256 resetTime) = _checkRateLimit(_globalRateLimit);
+        if (!success) {
+            revert GlobalRateLimitExceeded(resetTime);
         }
-        (bool gSuccess, uint256 gResetTime) = _checkRateLimit(_globalRateLimit);
-        if (!gSuccess) {
-            revert GlobalRateLimitExceeded(gResetTime);
+        _;
+    }
+
+    modifier clientRateLimited() {
+        (bool success, uint256 resetTime) = _checkRateLimit(_clientRateLimits[msg.sender]);
+        if (!success) {
+            revert ClientRateLimitExceeded(msg.sender, resetTime);
         }
-        _globalRateLimit.amount++;
-        _clientRateLimits[_msgSender()].amount++;
         _;
     }
 }
