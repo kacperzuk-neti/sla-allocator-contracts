@@ -80,6 +80,7 @@ contract SLAAllocatorTest is Test {
         slaAllocator = SLAAllocator(address(proxy));
         slaAllocator.initialize2(clientSmartContract, mockBeneficiaryFactory);
         verifySignaturesHelper = VerifySignaturesHelper(address(proxyHelper));
+        verifySignaturesHelper.initialize2(clientSmartContract, mockBeneficiaryFactory);
 
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
     }
@@ -360,26 +361,27 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPassportSigned() public view {
-        assertTrue(verifySignaturesHelper.hasRole(verifySignaturesHelper.ATTESTATOR_ROLE(), attestor));
-
-        SLAAllocator.Passport memory passport =
-            SLAAllocator.Passport({expirationTimestamp: block.timestamp + 1 days, subject: address(0x123), score: 100});
+        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
+            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
+        });
 
         bytes32 structHash = verifySignaturesHelper.hashPassportExt(passport);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOffChain = 0xe4473ea9d9322580ba9176aaf92e816e5fb409f88767d41e27362b59a923e3f4;
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        SLAAllocator.Signature memory sig = SLAAllocator.Signature(v, r, s);
-        SLAAllocator.PassportSigned memory signed = SLAAllocator.PassportSigned(passport, sig);
-        address recovered = verifySignaturesHelper.recoverFromSigExt(structHash, sig);
-        assertEq(recovered, attestor);
+        assertEq(digestOnChain, digestOffChain);
+
+        bytes memory signature =
+            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee91b";
+
+        SLAAllocator.PassportSigned memory signed =
+            SLAAllocator.PassportSigned({passport: passport, signature: signature});
+
         bool verified = verifySignaturesHelper.verifyPassportSignedExt(signed);
-        assertTrue(verified, "expected passport signature");
+        assertTrue(verified, "Signature invalid");
     }
 
     function testVerifyPaymentTransactionSignature() public view {
-        assertTrue(verifySignaturesHelper.hasRole(verifySignaturesHelper.ATTESTATOR_ROLE(), attestor));
-
         SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
             id: bytes("1"),
             from: CommonTypes.FilAddress({data: hex"f101"}),
@@ -388,37 +390,45 @@ contract SLAAllocatorTest is Test {
         });
 
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOffChain = 0xeb2d73b584bf46b56d41777d6ff22c88a8c39d3638acda00f1216637c8935662;
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        SLAAllocator.Signature memory sig = SLAAllocator.Signature(v, r, s);
-        SLAAllocator.PaymentTransactionSigned memory signed = SLAAllocator.PaymentTransactionSigned(txn, sig);
-        address recovered = verifySignaturesHelper.recoverFromSigExt(structHash, sig);
-        assertEq(recovered, attestor);
+        assertEq(digestOnChain, digestOffChain);
+
+        bytes memory signature =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
+
+        SLAAllocator.PaymentTransactionSigned memory signed =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
         bool verified = verifySignaturesHelper.verifyPaymentTransactionSignedExt(signed);
-        assertTrue(verified, "expected payment txn signature");
+        assertTrue(verified, "Signature invalid");
     }
 
     function testVerifyManualAttestationSignature() public view {
-        assertTrue(verifySignaturesHelper.hasRole(verifySignaturesHelper.ATTESTATOR_ROLE(), attestor));
+        bytes32 attestationId = bytes32(uint256(1));
 
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: keccak256(abi.encodePacked("1")),
-            client: vm.addr(0x123),
+        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
+            attestationId: attestationId,
+            client: 0x0000000000000000000000000000000000000123,
             provider: SP1,
             amount: 1,
             opaqueData: "data"
         });
 
-        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(att);
+        bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOffChain = 0xd78d976d5f4f8827cce3b16f23a691baafdf9269541d9a21b84233567d585000;
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        SLAAllocator.Signature memory sig = SLAAllocator.Signature(v, r, s);
-        SLAAllocator.ManualAttestationSigned memory signed = SLAAllocator.ManualAttestationSigned(attestation, sig);
-        address recovered = verifySignaturesHelper.recoverFromSigExt(structHash, sig);
-        assertEq(recovered, attestor);
+        assertEq(digestOnChain, digestOffChain);
+
+        bytes memory signature =
+            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
+
+        SLAAllocator.ManualAttestationSigned memory signed =
+            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+
         bool verified = verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
-        assertTrue(verified, "expected manual att signature");
+        assertTrue(verified, "Signature invalid");
     }
 }

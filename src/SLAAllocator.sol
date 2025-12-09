@@ -11,8 +11,6 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
-import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
-import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 
 import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
@@ -30,12 +28,6 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         CommonTypes.FilActorId provider;
     }
 
-    struct Signature {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
-
     struct Passport {
         uint256 expirationTimestamp;
         address subject;
@@ -44,7 +36,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
     struct PassportSigned {
         Passport passport;
-        Signature sig;
+        bytes signature;
     }
 
     struct ManualAttestation {
@@ -57,7 +49,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
     struct ManualAttestationSigned {
         ManualAttestation attestation;
-        Signature sig;
+        bytes signature;
     }
 
     struct PaymentTransaction {
@@ -69,7 +61,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
     struct PaymentTransactionSigned {
         PaymentTransaction txn;
-        Signature sig;
+        bytes signature;
     }
 
     /**
@@ -101,7 +93,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice EIP-712 typehash for Passport struct
      */
     bytes32 private constant PASSPORT_TYPEHASH =
-        keccak256("Passport(address subject,uint256 expirationTimestamp,uint64 score)");
+        keccak256("Passport(uint256 expirationTimestamp,address subject,uint64 score)");
 
     /**
      * @notice EIP-712 typehash for PaymentTransaction struct
@@ -340,7 +332,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     function verifyPassportSigned(PassportSigned calldata passport) internal view returns (bool) {
         bytes32 structHash = _hashPassport(passport.passport);
-        address signer = _recoverFromSig(structHash, passport.sig);
+        address signer = _recoverFromSig(structHash, passport.signature);
         return signer != address(0) && hasRole(ATTESTATOR_ROLE, signer);
     }
 
@@ -351,7 +343,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     function verifyPaymentTransactionSigned(PaymentTransactionSigned calldata txn) internal view returns (bool) {
         bytes32 structHash = _hashPaymentTransaction(txn.txn);
-        address signer = _recoverFromSig(structHash, txn.sig);
+        address signer = _recoverFromSig(structHash, txn.signature);
         return signer != address(0) && hasRole(ATTESTATOR_ROLE, signer);
     }
 
@@ -362,7 +354,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     function verifyManualAttestationSigned(ManualAttestationSigned calldata attestation) internal view returns (bool) {
         bytes32 structHash = _hashManualAttestation(attestation.attestation);
-        address signer = _recoverFromSig(structHash, attestation.sig);
+        address signer = _recoverFromSig(structHash, attestation.signature);
         return signer != address(0) && hasRole(ATTESTATOR_ROLE, signer);
     }
 
@@ -372,7 +364,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @return Hash of the struct
      */
     function _hashPassport(Passport calldata passport) internal pure returns (bytes32) {
-        return keccak256(abi.encode(PASSPORT_TYPEHASH, passport.subject, passport.expirationTimestamp, passport.score));
+        return keccak256(abi.encode(PASSPORT_TYPEHASH, passport.expirationTimestamp, passport.subject, passport.score));
     }
 
     /**
@@ -380,14 +372,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param txn PaymentTransaction struct
      * @return Hash of the struct
      */
-    function _hashPaymentTransaction(PaymentTransaction calldata txn) internal view returns (bytes32) {
-        bytes32 idHash = keccak256(txn.id);
-        uint64 resolvedFrom = PrecompilesAPI.resolveAddress(txn.from);
-        uint64 resolvedTo = PrecompilesAPI.resolveAddress(txn.to);
-        address fromHash = FilAddressIdConverter.toAddress(resolvedFrom);
-        address toHash = FilAddressIdConverter.toAddress(resolvedTo);
-
-        return keccak256(abi.encode(PAYMENT_TX_TYPEHASH, idHash, fromHash, toHash, txn.amount));
+    function _hashPaymentTransaction(PaymentTransaction calldata txn) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                PAYMENT_TX_TYPEHASH, keccak256(txn.id), keccak256(txn.from.data), keccak256(txn.to.data), txn.amount
+            )
+        );
     }
 
     /**
@@ -396,13 +386,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @return Hash of the struct
      */
     function _hashManualAttestation(ManualAttestation calldata attestation) internal pure returns (bytes32) {
-        uint64 providerUnwrapped = CommonTypes.FilActorId.unwrap(attestation.provider);
         return keccak256(
             abi.encode(
                 MANUAL_ATTESTATION_TYPEHASH,
                 attestation.attestationId,
                 attestation.client,
-                providerUnwrapped,
+                attestation.provider,
                 attestation.amount,
                 keccak256(bytes(attestation.opaqueData))
             )
@@ -412,11 +401,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     /**
      * @notice Recover address from signature over struct hash
      * @param structHash Hash of the struct
-     * @param sig Signature
+     * @param signature bytes
      * @return Address that signed the struct
      */
-    function _recoverFromSig(bytes32 structHash, Signature calldata sig) internal view returns (address) {
+    function _recoverFromSig(bytes32 structHash, bytes calldata signature) internal view returns (address) {
         bytes32 digest = _hashTypedDataV4(structHash);
-        return ECDSA.recover(digest, sig.v, sig.r, sig.s);
+        return ECDSA.recover(digest, signature);
     }
 }

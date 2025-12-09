@@ -18,12 +18,12 @@ contract VerifySignaturesHelper is SLAAllocator {
         return _hashManualAttestation(attestation);
     }
 
-    function hashPaymentTransactionExt(PaymentTransaction calldata txn) external view returns (bytes32) {
+    function hashPaymentTransactionExt(PaymentTransaction calldata txn) external pure returns (bytes32) {
         return _hashPaymentTransaction(txn);
     }
 
-    function recoverFromSigExt(bytes32 structHash, Signature calldata sig) external view returns (address) {
-        return _recoverFromSig(structHash, sig);
+    function recoverFromSigExt(bytes32 structHash, bytes calldata signature) external view returns (address) {
+        return _recoverFromSig(structHash, signature);
     }
 
     function verifyPassportSignedExt(PassportSigned calldata passport) external view returns (bool) {
@@ -40,5 +40,9 @@ contract VerifySignaturesHelper is SLAAllocator {
         returns (bool)
     {
         return verifyManualAttestationSigned(attestation);
+    }
+
+    function domainSeparatorExt() external view returns (bytes32) {
+        return _domainSeparatorV4();
     }
 }
