@@ -356,7 +356,7 @@ contract BeneficiaryTest is Test {
     }
 
     function testAcceptBeneficiaryRevertsWhenNoPendingChange() public {
-        vm.expectRevert(MinerUtils.NoNewBeneficiarySet.selector);
+        vm.expectRevert(MinerUtils.NoNewBeneficiaryProposed.selector);
         beneficiary.acceptBeneficiary(SP7);
     }
 
@@ -379,7 +379,7 @@ contract BeneficiaryTest is Test {
     function testAcceptBeneficiaryCallableByAnyone() public {
         address randomCaller = address(0x1234);
         vm.prank(randomCaller);
-        vm.expectRevert(MinerUtils.NoNewBeneficiarySet.selector);
+        vm.expectRevert(MinerUtils.NoNewBeneficiaryProposed.selector);
         beneficiary.acceptBeneficiary(SP7);
     }
 

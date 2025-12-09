@@ -257,7 +257,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     function acceptBeneficiary(CommonTypes.FilActorId minerId) external {
         MinerTypes.GetBeneficiaryReturn memory pendingBeneficiary =
-            MinerUtils.getBeneficiaryWithChecksForProposed(minerId, address(this));
+            MinerUtils.getBeneficiaryWithChecksForProposed(minerId);
 
         emit BeneficiaryAccepted(minerId, pendingBeneficiary.proposed.new_beneficiary);
         int256 exitCode = MinerAPI.changeBeneficiary(

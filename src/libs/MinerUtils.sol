@@ -16,9 +16,11 @@ import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 library MinerUtils {
     error ExitCodeError();
     error NoBeneficiarySet();
-    error NoNewBeneficiarySet();
+    error NoNewBeneficiaryProposed();
     error QuotaCannotBeNegative();
     error ExpirationBelowFiveYears();
+    error NewExpirationBelowActive();
+    error NewQuotaBelowActive();
     error QuotaNotUnlimited();
     error InvalidBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
     error InvalidNewBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
@@ -132,19 +134,18 @@ library MinerUtils {
      *      - The proposed new beneficiary does not correspond to expectedBeneficiary.
      *      - The proposed quota is below MIN_BENEFICIARY_QUOTA.
      * @param minerID The Filecoin miner actor id.
-     * @param expectedBeneficiary The expected EVM address of the new beneficiary.
      * @return beneficiaryData The MinerTypes.GetBeneficiaryReturn struct returned by the actor call.
      */
-    function getBeneficiaryWithChecksForProposed(CommonTypes.FilActorId minerID, address expectedBeneficiary)
+    function getBeneficiaryWithChecksForProposed(CommonTypes.FilActorId minerID)
         internal
         view
         returns (MinerTypes.GetBeneficiaryReturn memory)
     {
         MinerTypes.GetBeneficiaryReturn memory beneficiaryData = getBeneficiary(minerID);
 
-        if (beneficiaryData.proposed.new_beneficiary.data.length == 0) revert NoNewBeneficiarySet();
+        if (beneficiaryData.proposed.new_beneficiary.data.length == 0) revert NoNewBeneficiaryProposed();
 
-        (bool success, uint64 expectedBeneficiaryActorID) = FilAddressIdConverter.getActorID(expectedBeneficiary);
+        (bool success, uint64 expectedBeneficiaryActorID) = FilAddressIdConverter.getActorID(address(this));
         if (!success) {
             revert FailedToGetActorID();
         }
@@ -156,7 +157,13 @@ library MinerUtils {
         }
 
         (uint256 newQuota,) = Utils.bigIntToUint256(beneficiaryData.proposed.new_quota);
+        (uint256 activeQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.quota);
         if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
+        if (newQuota < activeQuota) revert NewQuotaBelowActive();
+
+        int64 activeExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
+        int64 proposedExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.proposed.new_expiration);
+        if (proposedExpirationEpoch < activeExpirationEpoch) revert NewExpirationBelowActive();
 
         return beneficiaryData;
     }

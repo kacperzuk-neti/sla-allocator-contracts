@@ -53,12 +53,22 @@
   },
   {
     "type": "error",
+    "name": "NewExpirationBelowActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NewQuotaBelowActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NoBeneficiarySet",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "NoNewBeneficiarySet",
+    "name": "NoNewBeneficiaryProposed",
     "inputs": []
   },
   {

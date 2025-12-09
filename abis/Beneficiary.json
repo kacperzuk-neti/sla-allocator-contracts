@@ -712,7 +712,17 @@
   },
   {
     "type": "error",
-    "name": "NoNewBeneficiarySet",
+    "name": "NewExpirationBelowActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NewQuotaBelowActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoNewBeneficiaryProposed",
     "inputs": []
   },
   {
