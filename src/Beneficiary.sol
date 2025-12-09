@@ -28,6 +28,10 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
 
     /**
+     * @notice The role to set terminated claims.
+     */
+    bytes32 public constant TERMINATION_ORACLE = keccak256("TERMINATION_ORACLE");
+    /**
      * @notice The ID of the storage provider.
      */
     CommonTypes.FilActorId public provider;
@@ -41,6 +45,11 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @notice The address to set as the burn address.
      */
     address public burnAddress;
+
+    /**
+     * @notice Mapping of claims that have been terminated early.
+     */
+    mapping(uint64 claim => bool isTerminated) public terminatedClaims;
 
     /**
      * @notice Emits a BurnAddressUpdated event.
@@ -103,19 +112,22 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @param provider_ Address of the storage provider
      * @param slaAllocator_ Address of the SLA registry contract
      * @param burnAddress_ Address of the burn address
+     * @param terminationOracle Address of the termination oracle
      */
     function initialize(
         address admin,
         address manager,
         CommonTypes.FilActorId provider_,
         SLAAllocator slaAllocator_,
-        address burnAddress_
+        address burnAddress_,
+        address terminationOracle
     ) external initializer {
         __AccessControl_init();
         _setRoleAdmin(WITHDRAWER_ROLE, MANAGER_ROLE);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
         _grantRole(WITHDRAWER_ROLE, manager);
+        _grantRole(TERMINATION_ORACLE, terminationOracle);
 
         provider = provider_;
         slaAllocator = slaAllocator_;
@@ -213,6 +225,17 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         int256 exitCode = MinerAPI.changeBeneficiary(minerID, params);
         if (exitCode != 0) {
             revert ExitCodeError(exitCode);
+        }
+    }
+
+    /**
+     * @notice Marks the given claims as terminated early.
+     * @dev Only callable by TERMINATION_ORACLE role.
+     * @param claims An array of claim IDs to mark as terminated.
+     */
+    function claimsTerminatedEarly(uint64[] calldata claims) external onlyRole(TERMINATION_ORACLE) {
+        for (uint256 i = 0; i < claims.length; i++) {
+            terminatedClaims[claims[i]] = true;
         }
     }
 

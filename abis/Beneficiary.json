@@ -36,6 +36,19 @@
   },
   {
     "type": "function",
+    "name": "TERMINATION_ORACLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "WITHDRAWER_ROLE",
     "inputs": [],
     "outputs": [
@@ -90,6 +103,19 @@
         "name": "newExpirationChainEpoch",
         "type": "int64",
         "internalType": "int64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimsTerminatedEarly",
+    "inputs": [
+      {
+        "name": "claims",
+        "type": "uint64[]",
+        "internalType": "uint64[]"
       }
     ],
     "outputs": [],
@@ -182,6 +208,11 @@
       },
       {
         "name": "burnAddress_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "terminationOracle",
         "type": "address",
         "internalType": "address"
       }
@@ -290,6 +321,25 @@
     "outputs": [
       {
         "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "terminatedClaims",
+    "inputs": [
+      {
+        "name": "claim",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "isTerminated",
         "type": "bool",
         "internalType": "bool"
       }

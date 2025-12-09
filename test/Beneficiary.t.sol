@@ -38,8 +38,10 @@ contract BeneficiaryTest is Test {
     SLAAllocator public slaAllocator;
     address public manager = vm.addr(1);
     address public burnAddress = vm.addr(2);
+    address public terminationOracle = vm.addr(3);
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
     address public constant CALL_ACTOR_ADDRESS = 0xfe00000000000000000000000000000000000003;
+    uint64[] public earlyTerminatedClaims = new uint64[](0);
 
     // solhint-disable var-name-mixedcase
     CommonTypes.FilActorId public SP1 = CommonTypes.FilActorId.wrap(uint64(10000));
@@ -74,7 +76,8 @@ contract BeneficiaryTest is Test {
         vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
         resolveAddress.setId(uint64(1022));
 
-        beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator, burnAddress);
+        earlyTerminatedClaims.push(1);
+        beneficiary = setupBeneficiary(address(this), manager, provider, slaAllocator, burnAddress, terminationOracle);
     }
 
     function setupBeneficiary(
@@ -82,13 +85,15 @@ contract BeneficiaryTest is Test {
         address withdrawer_,
         CommonTypes.FilActorId provider_,
         SLAAllocator slaAllocator_,
-        address burnAddress_
+        address burnAddress_,
+        address terminationOracle_
     ) public returns (Beneficiary) {
         Beneficiary impl = new Beneficiary();
 
         // solhint-disable gas-small-strings
-        bytes memory initData =
-            abi.encodeCall(Beneficiary.initialize, (admin_, withdrawer_, provider_, slaAllocator_, burnAddress_));
+        bytes memory initData = abi.encodeCall(
+            Beneficiary.initialize, (admin_, withdrawer_, provider_, slaAllocator_, burnAddress_, terminationOracle_)
+        );
         // solhint-enable gas-small-strings
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         return Beneficiary(payable(address(proxy)));
@@ -107,6 +112,11 @@ contract BeneficiaryTest is Test {
     function testIsWithdrawerSet() public view {
         bytes32 withdrawerRole = beneficiary.WITHDRAWER_ROLE();
         assertTrue(beneficiary.hasRole(withdrawerRole, manager));
+    }
+
+    function testIsTerminationOracleSet() public view {
+        bytes32 terminationOracleRole = beneficiary.TERMINATION_ORACLE();
+        assertTrue(beneficiary.hasRole(terminationOracleRole, terminationOracle));
     }
 
     function testIsManagerSetAsWithdrawerRoleAdmin() public view {
@@ -147,7 +157,9 @@ contract BeneficiaryTest is Test {
 
     function testWithdrawForAmberBand() public {
         CommonTypes.FilActorId providerWithAmberBandScore = CommonTypes.FilActorId.wrap(0x123);
-        beneficiary = setupBeneficiary(address(this), manager, providerWithAmberBandScore, slaAllocator, burnAddress);
+        beneficiary = setupBeneficiary(
+            address(this), manager, providerWithAmberBandScore, slaAllocator, burnAddress, terminationOracle
+        );
         vm.deal(address(beneficiary), 10000);
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
@@ -158,13 +170,45 @@ contract BeneficiaryTest is Test {
 
     function testWithdrawForRedBand() public {
         CommonTypes.FilActorId providerWithRedBandScore = CommonTypes.FilActorId.wrap(0x456);
-        beneficiary = setupBeneficiary(address(this), manager, providerWithRedBandScore, slaAllocator, burnAddress);
+        beneficiary = setupBeneficiary(
+            address(this), manager, providerWithRedBandScore, slaAllocator, burnAddress, terminationOracle
+        );
         vm.deal(address(beneficiary), 10000);
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
         emit Beneficiary.Withdrawn(SP1Address, 1000, 9000);
         beneficiary.withdraw(SP1Address);
+    }
+
+    function testClaimsTerminatedEarlyRevertsWhenNotTerminationOracle() public {
+        address notTerminationOracle = address(0x123);
+        bytes32 expectedRole = beneficiary.TERMINATION_ORACLE();
+        vm.prank(notTerminationOracle);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, notTerminationOracle, expectedRole
+            )
+        );
+        beneficiary.claimsTerminatedEarly(earlyTerminatedClaims);
+    }
+
+    function testClaimsTerminatedEarlySetCorrectly() public {
+        bool isFirstClaimTerminated = beneficiary.terminatedClaims(1);
+        assertTrue(!isFirstClaimTerminated);
+        earlyTerminatedClaims.push(2);
+        earlyTerminatedClaims.push(3);
+        vm.prank(terminationOracle);
+        beneficiary.claimsTerminatedEarly(earlyTerminatedClaims);
+
+        isFirstClaimTerminated = beneficiary.terminatedClaims(1);
+        bool isSecondClaimTerminated = beneficiary.terminatedClaims(2);
+        bool isThirdClaimTerminated = beneficiary.terminatedClaims(3);
+        assertTrue(isFirstClaimTerminated);
+        assertTrue(isSecondClaimTerminated);
+        assertTrue(isThirdClaimTerminated);
+        bool isFourthClaimTerminated = beneficiary.terminatedClaims(4);
+        assertTrue(!isFourthClaimTerminated);
     }
 
     function testWithddrawRevertsWhenNotWithdrawer() public {
