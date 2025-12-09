@@ -4,6 +4,7 @@
 pragma solidity 0.8.25;
 
 // solhint-disable-next-line max-states-count
+// solhint-disable function-max-lines
 contract ActorIdMock {
     bytes internal _getClaimsResult;
 

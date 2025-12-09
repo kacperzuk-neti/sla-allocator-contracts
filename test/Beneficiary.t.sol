@@ -421,5 +421,4 @@ contract BeneficiaryTest is Test {
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.NewExpirationBelowActive.selector));
         beneficiary.acceptBeneficiary(SP10);
     }
-
 }
