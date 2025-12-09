@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Context} from "lib/openzeppelin-contracts/contracts/utils/Context.sol";
-
 /**
  * @title RateLimited
  * @notice Abstract contract for rate limiting
