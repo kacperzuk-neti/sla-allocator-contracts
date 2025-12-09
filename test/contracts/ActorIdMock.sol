@@ -57,6 +57,20 @@ contract ActorIdMock {
                 hex"82824400C2A101834E0002863C1F5CDAE42F95400000004D00A18F07D736B90BE5500000001A005B8D80854400D4C1014E000278EF7C9A6BF689E106F000011A006ACFC0F5F4"
             );
         }
+        if (target == 90000) {
+            return abi.encode(
+                0,
+                0x51,
+                hex"82824400C2A101834E0002863C1F5CDAE42F954000000042000A1A005B8D80854400D4C1014E000278EF7C9A6BF689E106F000011A006ACFC0F5F4"
+            );
+        }
+        if (target == 100000) {
+            return abi.encode(
+                0,
+                0x51,
+                hex"82824400C2A101834E0002863C1F5CDAE42F95400000004E000278EF7C9A6BF689E106F000011A005B8D80854400D4C1014E000278EF7C9A6BF689E106FFFFFF1A004C4B40F5F4"
+            );
+        }
         if (target == 12345) {
             // Simulate error exit code
             return abi.encode(1, 0x51, hex"82824083404000F6");
@@ -154,3 +168,13 @@ contract ActorIdMock {
 // GetBeneficiaryReturn {
 //      ActiveBeneficiary active; beneficiary = f020674 term { quota: 1000, used_quota: 10, expiration: 6000000 }
 //      PendingBeneficiaryChange proposed; = { beneficiary = f024788, new_quota: 195884047900000000000000000001, new_expiration: 7000000, approved_by_beneficiary: true, approved_by_nominee: false } }
+
+// SP9 - 90000 - 82824400C2A101834E0002863C1F5CDAE42F954000000042000A1A005B8D80854400D4C1014E000278EF7C9A6BF689E106F000011A006ACFC0F5F4
+// GetBeneficiaryReturn {
+//      ActiveBeneficiary active; beneficiary = f020674 term { quota: 200000000000000000000000000000, used_quota: 10, expiration: 6000000 }
+//      PendingBeneficiaryChange proposed; = { beneficiary = f024788, new_quota: 195884047900000000000000000001, new_expiration: 7000000, approved_by_beneficiary: true, approved_by_nominee: false } }
+
+// SP10 - 100000 - 82824400C2A101834E0002863C1F5CDAE42F95400000004E000278EF7C9A6BF689E106F000011A005B8D80854400D4C1014E000278EF7C9A6BF689E106FFFFFF1A004C4B40F5F4
+// GetBeneficiaryReturn {
+//      ActiveBeneficiary active; beneficiary = f020674 term { quota: 200000000000000000000000000000, used_quota: 195884047900000000000000000001, expiration: 6000000 }
+//      PendingBeneficiaryChange proposed; = { beneficiary = f024788, new_quota: 200000000000000000000268435455, new_expiration: 5000000, approved_by_beneficiary: true, approved_by_nominee: false } }

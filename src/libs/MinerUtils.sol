@@ -158,8 +158,10 @@ library MinerUtils {
 
         (uint256 newQuota,) = Utils.bigIntToUint256(beneficiaryData.proposed.new_quota);
         (uint256 activeQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.quota);
+        (uint256 activeUsedQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.used_quota);
+
         if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
-        if (newQuota < activeQuota) revert NewQuotaBelowActive();
+        if (newQuota < activeQuota - activeUsedQuota) revert NewQuotaBelowActive();
 
         int64 activeExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
         int64 proposedExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.proposed.new_expiration);

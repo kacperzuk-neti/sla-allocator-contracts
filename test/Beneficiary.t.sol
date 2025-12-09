@@ -51,6 +51,9 @@ contract BeneficiaryTest is Test {
     CommonTypes.FilActorId public SP5 = CommonTypes.FilActorId.wrap(uint64(50000));
     CommonTypes.FilActorId public SP7 = CommonTypes.FilActorId.wrap(uint64(70000));
     CommonTypes.FilActorId public SP8 = CommonTypes.FilActorId.wrap(uint64(80000));
+    CommonTypes.FilActorId public SP6 = CommonTypes.FilActorId.wrap(uint64(60000));
+    CommonTypes.FilActorId public SP9 = CommonTypes.FilActorId.wrap(uint64(90000));
+    CommonTypes.FilActorId public SP10 = CommonTypes.FilActorId.wrap(uint64(100000));
     CommonTypes.FilActorId public beneficiaryContractId = CommonTypes.FilActorId.wrap(uint64(1022));
 
     CommonTypes.FilAddress public SP1Address = FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(SP1));
@@ -394,7 +397,7 @@ contract BeneficiaryTest is Test {
         resolveAddress.setId(address(beneficiary), uint64(1023));
         resolveAddress.setAddress(hex"00D4C101", uint64(1023));
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.QuotaNotUnlimited.selector));
-        beneficiary.acceptBeneficiary(SP5);
+        beneficiary.acceptBeneficiary(SP6);
     }
 
     function testShouldRevertWhenGetActorResolvesWithFalse() public {
@@ -404,4 +407,19 @@ contract BeneficiaryTest is Test {
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.FailedToGetActorID.selector));
         beneficiary.acceptBeneficiary(SP3);
     }
+
+    function testShouldRevertWhenNewQuotaIsBelowActive() public {
+        resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00D4C101", uint64(1023));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.NewQuotaBelowActive.selector));
+        beneficiary.acceptBeneficiary(SP9);
+    }
+
+    function testShouldRevertWhenNewExpirationIsBelowActive() public {
+        resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00D4C101", uint64(1023));
+        vm.expectRevert(abi.encodeWithSelector(MinerUtils.NewExpirationBelowActive.selector));
+        beneficiary.acceptBeneficiary(SP10);
+    }
+
 }
