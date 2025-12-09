@@ -248,6 +248,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         }
     }
 
+    /**
      * @notice Accepts a pending beneficiary change proposal for this contract on the miner actor.
      * @param minerId The miner actor id to accept the beneficiary change for
      * @dev Anyone can call this function. It:
