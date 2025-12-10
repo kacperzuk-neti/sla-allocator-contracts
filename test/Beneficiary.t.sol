@@ -388,6 +388,7 @@ contract BeneficiaryTest is Test {
 
     function testShouldRevertAcceptWhenChangeReverts() public {
         resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00C2A101", uint64(1023));
         resolveAddress.setAddress(hex"00D4C101", uint64(1023));
         vm.expectRevert(abi.encodeWithSelector(Beneficiary.ExitCodeError.selector, 1));
         beneficiary.acceptBeneficiary(SP8);
@@ -395,6 +396,7 @@ contract BeneficiaryTest is Test {
 
     function testShouldRevertAcceptWhenQuotaIsNotUnlimited() public {
         resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00C2A101", uint64(1024));
         resolveAddress.setAddress(hex"00D4C101", uint64(1023));
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.QuotaNotUnlimited.selector));
         beneficiary.acceptBeneficiary(SP6);
@@ -410,6 +412,7 @@ contract BeneficiaryTest is Test {
 
     function testShouldRevertWhenNewQuotaIsBelowActive() public {
         resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00C2A101", uint64(1023));
         resolveAddress.setAddress(hex"00D4C101", uint64(1023));
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.NewQuotaBelowActive.selector));
         beneficiary.acceptBeneficiary(SP9);
@@ -417,6 +420,7 @@ contract BeneficiaryTest is Test {
 
     function testShouldRevertWhenNewExpirationIsBelowActive() public {
         resolveAddress.setId(address(beneficiary), uint64(1023));
+        resolveAddress.setAddress(hex"00C2A101", uint64(1023));
         resolveAddress.setAddress(hex"00D4C101", uint64(1023));
         vm.expectRevert(abi.encodeWithSelector(MinerUtils.NewExpirationBelowActive.selector));
         beneficiary.acceptBeneficiary(SP10);

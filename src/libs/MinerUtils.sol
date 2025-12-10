@@ -156,16 +156,20 @@ library MinerUtils {
             revert InvalidNewBeneficiary(expectedBeneficiaryActorID, newBeneficiaryActorID);
         }
 
+        uint64 activeBeneficiaryActorID = PrecompilesAPI.resolveAddress(beneficiaryData.active.beneficiary);
         (uint256 newQuota,) = Utils.bigIntToUint256(beneficiaryData.proposed.new_quota);
-        (uint256 activeQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.quota);
-        (uint256 activeUsedQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.used_quota);
 
-        if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
-        if (newQuota < activeQuota - activeUsedQuota) revert NewQuotaBelowActive();
+        if (activeBeneficiaryActorID == newBeneficiaryActorID) {
+            (uint256 activeQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.quota);
+            (uint256 activeUsedQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.used_quota);
+            if (newQuota < activeQuota - activeUsedQuota) revert NewQuotaBelowActive();
 
-        int64 activeExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
-        int64 proposedExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.proposed.new_expiration);
-        if (proposedExpirationEpoch < activeExpirationEpoch) revert NewExpirationBelowActive();
+            int64 activeExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
+            int64 proposedExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.proposed.new_expiration);
+            if (proposedExpirationEpoch < activeExpirationEpoch) revert NewExpirationBelowActive();
+        } else {
+            if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
+        }
 
         return beneficiaryData;
     }
