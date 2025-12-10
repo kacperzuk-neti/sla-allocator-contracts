@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
+import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
@@ -11,6 +12,8 @@ import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
 import {MinerUtils} from "./libs/MinerUtils.sol";
+import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
+import {Client} from "./Client.sol";
 
 /**
  * @title Beneficiary
@@ -44,6 +47,11 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     SLAAllocator public slaAllocator;
 
     /**
+     * @notice The Client contract.
+     */
+    Client public clientContract;
+
+    /**
      * @notice The address to set as the burn address.
      */
     address public burnAddress;
@@ -74,7 +82,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     event Withdrawn(CommonTypes.FilAddress indexed recipient, uint256 amountToSP, uint256 amountToRedirected);
     // solhint-enable gas-indexed-events
-
     /**
      * @notice Emitted when changeBeneficiary proposal is approved
      * @param minerID The miner actor id to change the beneficiary for
@@ -121,7 +128,7 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @param provider_ Address of the storage provider
      * @param slaAllocator_ Address of the SLA registry contract
      * @param burnAddress_ Address of the burn address
-     * @param terminationOracle Address of the termination oracle
+     * @param clientContract_ Address of the Client contract
      */
     function initialize(
         address admin,
@@ -129,18 +136,18 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         CommonTypes.FilActorId provider_,
         SLAAllocator slaAllocator_,
         address burnAddress_,
-        address terminationOracle
+        Client clientContract_
     ) external initializer {
         __AccessControl_init();
         _setRoleAdmin(WITHDRAWER_ROLE, MANAGER_ROLE);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
         _grantRole(WITHDRAWER_ROLE, manager);
-        _grantRole(TERMINATION_ORACLE, terminationOracle);
 
         provider = provider_;
         slaAllocator = slaAllocator_;
         burnAddress = burnAddress_;
+        clientContract = clientContract_;
     }
 
     /**
@@ -171,11 +178,27 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     function withdraw(CommonTypes.FilAddress calldata recipient) external onlyRole(WITHDRAWER_ROLE) {
         uint256 amount = address(this).balance;
-        address client = slaAllocator.providerClients(provider);
-        SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(client, provider));
-        uint256 score = slaRegistry.score(client, provider);
-        (uint256 amountToSP, uint256 amountToBeRedirected) = _slashByScore(amount, score);
-
+        address[] memory spClients = clientContract.getSPClients(provider);
+        uint256 totalSize = 0;
+        uint256[] memory sizePerClient = new uint256[](spClients.length);
+        uint256[] memory scorePerClient = new uint256[](spClients.length);
+        int64 currentEpoch = int64(uint64(block.number));
+        for (uint256 i = 0; i < spClients.length; i++) {
+            SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(spClients[i], provider));
+            scorePerClient[i] = slaRegistry.score(spClients[i], provider);
+            sizePerClient[i] = clientContract.getClientSpActiveDataSize(spClients[i], provider);
+            totalSize += sizePerClient[i];
+        }
+        uint256 finalScore = 0;
+        if (totalSize == 0) {
+            finalScore = 100;
+        } else {
+            for (uint256 i = 0; i < spClients.length; i++) {
+                uint256 weight = (sizePerClient[i] * 1e18) / totalSize;
+                finalScore += (weight * scorePerClient[i]) / 1e18;
+            }
+        }
+        (uint256 amountToSP, uint256 amountToBeRedirected) = _slashByScore(amount, finalScore);
         emit Withdrawn(recipient, amountToSP, amountToBeRedirected);
         // solhint-disable-next-line check-send-result
         int256 exitCode = SendAPI.send(recipient, amount);

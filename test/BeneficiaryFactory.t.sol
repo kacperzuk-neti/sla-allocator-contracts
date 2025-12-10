@@ -13,6 +13,7 @@ import {BeneficiaryFactory} from "../src/BeneficiaryFactory.sol";
 import {Beneficiary} from "../src/Beneficiary.sol";
 import {SLAAllocator} from "../src/SLAAllocator.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {Client} from "../src/Client.sol";
 
 contract BeneficiaryFactoryTest is Test {
     BeneficiaryFactory public factory;
@@ -21,7 +22,7 @@ contract BeneficiaryFactoryTest is Test {
     address public slaAllocator;
     address public withdrawer;
     address public burnAddress;
-    address public terminationOracle;
+    Client public clientContract;
     CommonTypes.FilActorId public provider;
     BeneficiaryFactory public factoryImpl;
     bytes public initData;
@@ -32,13 +33,11 @@ contract BeneficiaryFactoryTest is Test {
         provider = CommonTypes.FilActorId.wrap(1);
         slaAllocator = vm.addr(101);
         burnAddress = vm.addr(102);
-        terminationOracle = vm.addr(103);
         beneficiaryImpl = address(new Beneficiary());
-
+        clientContract = new Client();
         factoryImpl = new BeneficiaryFactory();
         initData = abi.encodeCall(
-            BeneficiaryFactory.initialize,
-            (admin, beneficiaryImpl, SLAAllocator(slaAllocator), burnAddress, terminationOracle)
+            BeneficiaryFactory.initialize, (admin, beneficiaryImpl, SLAAllocator(slaAllocator), burnAddress)
         );
         factory = BeneficiaryFactory(address(new ERC1967Proxy(address(factoryImpl), initData)));
     }
@@ -55,26 +54,26 @@ contract BeneficiaryFactoryTest is Test {
         address expectedProxy = computeProxyAddress(admin, withdrawer, provider, factory.nonce(admin, provider) + 1);
         emit BeneficiaryFactory.ProxyCreated(expectedProxy, provider);
 
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, clientContract);
     }
 
     function testDeployMarksProxyAsDeployed() public {
         address expectedProxy = computeProxyAddress(admin, withdrawer, provider, factory.nonce(admin, provider) + 1);
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, clientContract);
 
         assertTrue(factory.instances(provider) == expectedProxy);
     }
 
     function testDeployIncrementsNonce() public {
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, clientContract);
         assertEq(factory.nonce(admin, provider), 1);
     }
 
     function testDeployRevertsIfInstanceExists() public {
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, clientContract);
 
         vm.expectRevert(abi.encodeWithSelector(BeneficiaryFactory.InstanceAlreadyExists.selector));
-        factory.create(admin, withdrawer, provider);
+        factory.create(admin, withdrawer, provider, clientContract);
     }
 
     function computeProxyAddress(address admin_, address withdrawer_, CommonTypes.FilActorId provider_, uint256 nonce)
@@ -88,7 +87,7 @@ contract BeneficiaryFactoryTest is Test {
                 address(factory.beacon()),
                 abi.encodeCall(
                     Beneficiary.initialize,
-                    (admin_, withdrawer_, provider_, SLAAllocator(slaAllocator), burnAddress, terminationOracle)
+                    (admin_, withdrawer_, provider_, SLAAllocator(slaAllocator), burnAddress, clientContract)
                 )
             )
         );

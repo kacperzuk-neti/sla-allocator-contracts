@@ -17,13 +17,15 @@ import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdCo
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
 import {BuiltInActorForTransferFunctionMock} from "./contracts/BuiltInActorForTransferFunctionMock.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {MockClientContract} from "./contracts/MockClientContract.sol";
 
 contract ClientTest is Test {
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
     address public datacapContract = address(0xfF00000000000000000000000000000000000007);
     address public allocator;
     address public clientAddress;
-    bytes public transferTo = abi.encodePacked(vm.addr(6));
+    address public terminationOracle;
+    bytes public transferTo = abi.encodePacked(vm.addr(2));
 
     CommonTypes.FilActorId public providerFilActorId;
     // solhint-disable-next-line var-name-mixedcase
@@ -38,8 +40,11 @@ contract ClientTest is Test {
     ActorIdMock public actorIdMock;
     ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
     ResolveAddressPrecompileFailingMock public resolveAddressPrecompileFailingMock;
+    MockClientContract public clientContractMock;
     ResolveAddressPrecompileMock public resolveAddress =
         ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
+
+    uint64[] public earlyTerminatedClaims = new uint64[](0);
 
     function setUp() public {
         Client impl = new Client();
@@ -48,20 +53,26 @@ contract ClientTest is Test {
         clientAddress = address(0x789);
 
         mockBeneficiaryFactory = new MockBeneficiaryFactory();
-
+        terminationOracle = vm.addr(3);
         // solhint-disable-next-line gas-small-strings
         bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,address)", address(this), allocator, mockBeneficiaryFactory
+            "initialize(address,address,address,address)",
+            address(this),
+            allocator,
+            mockBeneficiaryFactory,
+            terminationOracle
         );
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         client = Client(address(proxy));
-
+        clientContractMock = new MockClientContract();
         actorIdMock = new ActorIdMock();
         actorIdExitCodeErrorFailingMock = new ActorIdExitCodeErrorFailingMock();
         resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
         resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
         builtInActorForTransferFunctionMock = new BuiltInActorForTransferFunctionMock();
+
+        earlyTerminatedClaims.push(1);
 
         address actorIdProxy = address(new MockProxy(address(5555)));
         vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
@@ -96,6 +107,11 @@ contract ClientTest is Test {
     function testIsAllocatorSet() public view {
         bytes32 allocatorRole = client.ALLOCATOR_ROLE();
         assertTrue(client.hasRole(allocatorRole, allocator));
+    }
+
+    function testIsTerminationOracleSet() public view {
+        bytes32 terminationOracleRole = client.TERMINATION_ORACLE();
+        assertTrue(client.hasRole(terminationOracleRole, terminationOracle));
     }
 
     function testIncreaseAndDecreaseAllowance() public {
@@ -299,7 +315,7 @@ contract ClientTest is Test {
         client.transfer(transferParams);
     }
 
-    function testClaimExtension() public {
+    function testClaimExtensionn() public {
         // params taken directly from `boost extend-deal` message
         // no allocations
         // 1 extension for provider 20000 and claim id 1
@@ -377,5 +393,51 @@ contract ClientTest is Test {
         assertEq(afterTransfer.length, 1);
         assertEq(afterTransfer[0].client, clientAddress);
         assertEq(afterTransfer[0].usage, 2048);
+    }
+
+    function testClaimsTerminatedEarlyRevertsWhenNotTerminationOracle() public {
+        address notTerminationOracle = vm.addr(4);
+        bytes32 expectedRole = client.TERMINATION_ORACLE();
+        vm.prank(notTerminationOracle);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, notTerminationOracle, expectedRole
+            )
+        );
+        client.claimsTerminatedEarly(earlyTerminatedClaims);
+    }
+
+    function testClaimsTerminatedEarlySetCorrectly() public {
+        bool isFirstClaimTerminated = client.terminatedClaims(1);
+        assertTrue(!isFirstClaimTerminated);
+        earlyTerminatedClaims.push(2);
+        earlyTerminatedClaims.push(3);
+        vm.prank(terminationOracle);
+        client.claimsTerminatedEarly(earlyTerminatedClaims);
+
+        isFirstClaimTerminated = client.terminatedClaims(1);
+        bool isSecondClaimTerminated = client.terminatedClaims(2);
+        bool isThirdClaimTerminated = client.terminatedClaims(3);
+        assertTrue(isFirstClaimTerminated);
+        assertTrue(isSecondClaimTerminated);
+        assertTrue(isThirdClaimTerminated);
+        bool isFourthClaimTerminated = client.terminatedClaims(4);
+        assertTrue(!isFourthClaimTerminated);
+    }
+
+    function testGetClientSpActiveDataSizeRevertGetClaimsCallFailed() public {
+        vm.etch(CALL_ACTOR_ID, address(builtInActorForTransferFunctionMock).code);
+        vm.expectRevert(Client.GetClaimsCallFailed.selector);
+        client.getClientSpActiveDataSize(clientAddress, SP2);
+    }
+
+    function testGetClientSpActiveDataSizeWithFaileCode() public {
+        actorIdMock.setGetClaimsResult(
+            hex"8282008182001081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+        );
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        uint256 size = clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
+        assertEq(size, 2048);
     }
 }
