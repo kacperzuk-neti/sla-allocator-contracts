@@ -10,6 +10,8 @@ import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
 import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
+import {MinerUtils} from "./libs/MinerUtils.sol";
+
 /**
  * @title Beneficiary
  * @notice Upgradeable contract for managing beneficiaries with role-based access control
@@ -86,6 +88,13 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         uint256 newQuota,
         int64 newExpirationChainEpoch
     );
+
+    /**
+     * @notice Emitted when beneficiary is accepted
+     * @param minerID The miner actor id to accept the beneficiary for
+     * @param newBeneficiary The new beneficiary FilAddress
+     */
+    event BeneficiaryAccepted(CommonTypes.FilActorId indexed minerID, CommonTypes.FilAddress indexed newBeneficiary);
 
     /**
      * @notice Error thrown when the FVM call returns a non-zero exit code.
@@ -236,6 +245,32 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     function claimsTerminatedEarly(uint64[] calldata claims) external onlyRole(TERMINATION_ORACLE) {
         for (uint256 i = 0; i < claims.length; i++) {
             terminatedClaims[claims[i]] = true;
+        }
+    }
+
+    /**
+     * @notice Accepts a pending beneficiary change proposal for this contract on the miner actor.
+     * @param minerId The miner actor id to accept the beneficiary change for
+     * @dev Anyone can call this function. It:
+     *      - Uses MinerUtils to fetch and validate the current pending beneficiary proposal for `minerId`.
+     *      - Calls MinerAPI.changeBeneficiary with the proposed parameters to accept the change.
+     *      - Reverts with ExitCodeError if the actor call returns a non-zero exit code.
+     */
+    function acceptBeneficiary(CommonTypes.FilActorId minerId) external {
+        MinerTypes.GetBeneficiaryReturn memory pendingBeneficiary =
+            MinerUtils.getBeneficiaryWithChecksForProposed(minerId);
+
+        emit BeneficiaryAccepted(minerId, pendingBeneficiary.proposed.new_beneficiary);
+        int256 exitCode = MinerAPI.changeBeneficiary(
+            minerId,
+            MinerTypes.ChangeBeneficiaryParams({
+                new_beneficiary: pendingBeneficiary.proposed.new_beneficiary,
+                new_quota: pendingBeneficiary.proposed.new_quota,
+                new_expiration: pendingBeneficiary.proposed.new_expiration
+            })
+        );
+        if (exitCode != 0) {
+            revert ExitCodeError(exitCode);
         }
     }
 

@@ -16,10 +16,14 @@ import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 library MinerUtils {
     error ExitCodeError();
     error NoBeneficiarySet();
+    error NoNewBeneficiaryProposed();
     error QuotaCannotBeNegative();
     error ExpirationBelowFiveYears();
+    error NewExpirationBelowActive();
+    error NewQuotaBelowActive();
     error QuotaNotUnlimited();
     error InvalidBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
+    error InvalidNewBeneficiary(uint64 beneficiary, uint64 expectedBeneficiary);
     error BeneficiaryInstanceNonexistent();
     error FailedToGetActorID();
     /**
@@ -118,6 +122,53 @@ library MinerUtils {
             int64 currentEpoch = int64(uint64(block.number));
             int64 expirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
             if (expirationEpoch < currentEpoch + EXPIRATION_5_YEARS) revert ExpirationBelowFiveYears();
+        }
+
+        return beneficiaryData;
+    }
+
+    /**
+     * @notice Retrieves beneficiary info and validates a pending change for a specific contract address.
+     * @dev Reverts if:
+     *      - No pending beneficiary is set.
+     *      - The proposed new beneficiary does not correspond to expectedBeneficiary.
+     *      - The proposed quota is below MIN_BENEFICIARY_QUOTA.
+     * @param minerID The Filecoin miner actor id.
+     * @return beneficiaryData The MinerTypes.GetBeneficiaryReturn struct returned by the actor call.
+     */
+    function getBeneficiaryWithChecksForProposed(CommonTypes.FilActorId minerID)
+        internal
+        view
+        returns (MinerTypes.GetBeneficiaryReturn memory)
+    {
+        MinerTypes.GetBeneficiaryReturn memory beneficiaryData = getBeneficiary(minerID);
+
+        if (beneficiaryData.proposed.new_beneficiary.data.length == 0) revert NoNewBeneficiaryProposed();
+
+        (bool success, uint64 expectedBeneficiaryActorID) = FilAddressIdConverter.getActorID(address(this));
+        if (!success) {
+            revert FailedToGetActorID();
+        }
+
+        uint64 newBeneficiaryActorID = PrecompilesAPI.resolveAddress(beneficiaryData.proposed.new_beneficiary);
+
+        if (newBeneficiaryActorID != expectedBeneficiaryActorID) {
+            revert InvalidNewBeneficiary(expectedBeneficiaryActorID, newBeneficiaryActorID);
+        }
+
+        uint64 activeBeneficiaryActorID = PrecompilesAPI.resolveAddress(beneficiaryData.active.beneficiary);
+        (uint256 newQuota,) = Utils.bigIntToUint256(beneficiaryData.proposed.new_quota);
+
+        if (activeBeneficiaryActorID == newBeneficiaryActorID) {
+            (uint256 activeQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.quota);
+            (uint256 activeUsedQuota,) = Utils.bigIntToUint256(beneficiaryData.active.term.used_quota);
+            if (newQuota < activeQuota - activeUsedQuota) revert NewQuotaBelowActive();
+
+            int64 activeExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.active.term.expiration);
+            int64 proposedExpirationEpoch = CommonTypes.ChainEpoch.unwrap(beneficiaryData.proposed.new_expiration);
+            if (proposedExpirationEpoch < activeExpirationEpoch) revert NewExpirationBelowActive();
+        } else {
+            if (newQuota < MIN_BENEFICIARY_QUOTA) revert QuotaNotUnlimited();
         }
 
         return beneficiaryData;
