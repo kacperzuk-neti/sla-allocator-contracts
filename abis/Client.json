@@ -32,6 +32,19 @@
   },
   {
     "type": "function",
+    "name": "TERMINATION_ORACLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "TOKEN_PRECISION",
     "inputs": [],
     "outputs": [
@@ -108,6 +121,48 @@
   },
   {
     "type": "function",
+    "name": "claimsTerminatedEarly",
+    "inputs": [
+      {
+        "name": "claims",
+        "type": "uint64[]",
+        "internalType": "uint64[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "clientAllocationIdsPerProvider",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "allocationIds",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "decreaseAllowance",
     "inputs": [
       {
@@ -131,6 +186,30 @@
   },
   {
     "type": "function",
+    "name": "getClientSpActiveDataSize",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -144,6 +223,25 @@
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSPClients",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "clients",
+        "type": "address[]",
+        "internalType": "address[]"
       }
     ],
     "stateMutability": "view"
@@ -301,6 +399,11 @@
         "name": "beneficiaryFactory_",
         "type": "address",
         "internalType": "contract BeneficiaryFactory"
+      },
+      {
+        "name": "terminationOracle",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -381,6 +484,25 @@
     "outputs": [
       {
         "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "terminatedClaims",
+    "inputs": [
+      {
+        "name": "claim",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "isTerminated",
         "type": "bool",
         "internalType": "bool"
       }
@@ -644,6 +766,27 @@
   },
   {
     "type": "error",
+    "name": "AllocationNotFound",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "allocationId",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "AlreadyZero",
     "inputs": []
   },
@@ -811,6 +954,11 @@
   },
   {
     "type": "error",
+    "name": "InvalidFirstElement",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
   },
@@ -826,7 +974,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidSecondElement",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidTokenReceived",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTopLevelArray",
     "inputs": []
   },
   {

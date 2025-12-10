@@ -136,6 +136,19 @@
   },
   {
     "type": "function",
+    "name": "clientContract",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract Client"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -225,9 +238,9 @@
         "internalType": "address"
       },
       {
-        "name": "terminationOracle",
+        "name": "clientContract_",
         "type": "address",
-        "internalType": "address"
+        "internalType": "contract Client"
       }
     ],
     "outputs": [],
