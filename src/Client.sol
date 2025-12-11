@@ -16,6 +16,7 @@ import {UtilsHandlers} from "filecoin-solidity/v0.8/utils/UtilsHandlers.sol";
 import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 import {AllocationResponseCbor} from "./libs/AllocationResponseCbor.sol";
+import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
 
 /**
  * @title Client
@@ -162,14 +163,28 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     error AllocationNotFound(CommonTypes.FilActorId provider, address client, uint64 allocationId);
 
+    /**
+     * @notice Thrown if beneficiary expiration is insufficient
+     */
+    error InsufficientBeneficiaryExpiration(
+        CommonTypes.FilActorId provider, int64 beneficiaryExpiration, int64 requiredExpiration
+    );
+
+    /**
+     * @notice Thrown if no allocation or claim is found
+     */
+    error NoAllocationOrClaim();
+
     struct ProviderAllocation {
         CommonTypes.FilActorId provider;
         uint64 size;
+        int64 allocationTime;
     }
 
     struct ProviderClaim {
         CommonTypes.FilActorId provider;
         CommonTypes.FilActorId claim;
+        int64 termMax;
     }
 
     struct ClientDataUsage {
@@ -259,9 +274,14 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         if (failed) revert InvalidAmount();
         uint256 datacapAmount = tokenAmount / TOKEN_PRECISION;
 
-        (ProviderAllocation[] memory allocations, ProviderClaim[] memory claimExtensions) =
-            _deserializeVerifregOperatorData(params.operator_data);
+        (
+            ProviderAllocation[] memory allocations,
+            ProviderClaim[] memory claimExtensions,
+            ProviderAllocation memory longestAllocation,
+            ProviderClaim memory longestClaimExtension
+        ) = _deserializeVerifregOperatorData(params.operator_data);
 
+        _verifyBeneficiaryExpiration(longestAllocation, longestClaimExtension);
         _verifyAndRegisterAllocations(allocations);
         _verifyAndRegisterClaimExtensions(claimExtensions);
         emit DatacapSpent(msg.sender, datacapAmount);
@@ -364,17 +384,67 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         }
     }
 
+    /**
+     * @notice Verifies that the beneficiary expiration is sufficient for the longest allocation.
+     * @param longestAllocation The longest allocation.
+     * @dev Reverts with InsufficientBeneficiaryExpiration if the beneficiary expiration is insufficient.
+     */
+    function _verifyBeneficiaryExpiration(
+        ProviderAllocation memory longestAllocation,
+        ProviderClaim memory longestClaimExtension
+    ) internal {
+        MinerTypes.GetBeneficiaryReturn memory beneficiary;
+        int64 beneficiaryExpiration;
+
+        if (longestClaimExtension.termMax != 0) {
+            beneficiary = MinerUtils.getBeneficiaryWithChecks(
+                longestClaimExtension.provider, beneficiaryFactory, true, true, true
+            );
+            int64 beneficiaryExpiration = CommonTypes.ChainEpoch.unwrap(beneficiary.active.term.expiration);
+
+            if (int64(longestClaimExtension.termMax) > beneficiaryExpiration + 250 weeks) {
+                revert InsufficientBeneficiaryExpiration(
+                    longestClaimExtension.provider, beneficiaryExpiration, longestClaimExtension.termMax
+                );
+            }
+            return;
+        }
+
+        if (longestAllocation.allocationTime != 0) {
+            beneficiary =
+                MinerUtils.getBeneficiaryWithChecks(longestAllocation.provider, beneficiaryFactory, true, true, true);
+            beneficiaryExpiration = CommonTypes.ChainEpoch.unwrap(beneficiary.active.term.expiration);
+
+            if (int64(longestAllocation.allocationTime) > beneficiaryExpiration + 180 days) {
+                revert InsufficientBeneficiaryExpiration(
+                    longestAllocation.provider, beneficiaryExpiration, longestAllocation.allocationTime
+                );
+            }
+
+            return;
+        }
+
+        revert NoAllocationOrClaim();
+    }
+
     // solhint-disable function-max-lines
     /**
      * @notice Deserialize Verifreg Operator Data.
      * @param cborData The cbor encoded operator data.
      * @return allocations Array of provider allocations.
      * @return claimExtensions Array of provider claims.
+     * @return longestAllocation Allocation with the longest term.
+     * @return longestClaimExtension Claim extension with the longest term.
      */
     function _deserializeVerifregOperatorData(bytes memory cborData)
         internal
         pure
-        returns (ProviderAllocation[] memory allocations, ProviderClaim[] memory claimExtensions)
+        returns (
+            ProviderAllocation[] memory allocations,
+            ProviderClaim[] memory claimExtensions,
+            ProviderAllocation memory longestAllocation,
+            ProviderClaim memory longestClaimExtension
+        )
     {
         uint256 operatorDataLength;
         uint256 allocationRequestsLength;
@@ -382,6 +452,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         uint64 provider;
         uint64 claimId;
         uint64 size;
+        int64 termMax;
+        int64 expiration;
         uint256 byteIdx = 0;
 
         (operatorDataLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
@@ -402,12 +474,17 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             (, byteIdx) = CBORDecoder.readBytes(cborData, byteIdx); // data (CID)
             (size, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
             (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // termMin
-            (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // termMax
-            (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // expiration
             // slither-disable-end unused-return
+            (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+            (expiration, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
 
             allocations[i].provider = CommonTypes.FilActorId.wrap(provider);
             allocations[i].size = size;
+            allocations[i].allocationTime = termMax + expiration;
+
+            if (allocations[i].allocationTime > longestAllocation.allocationTime) {
+                longestAllocation = allocations[i];
+            }
         }
 
         (claimExtensionRequestsLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
@@ -422,12 +499,15 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
 
             (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
             (claimId, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
-            // slither-disable-start unused-return
-            (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // termMax
-            // slither-disable-end unused-return
+            (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
 
             claimExtensions[i].provider = CommonTypes.FilActorId.wrap(provider);
             claimExtensions[i].claim = CommonTypes.FilActorId.wrap(claimId);
+            claimExtensions[i].termMax = termMax;
+
+            if (termMax > longestClaimExtension.termMax) {
+                longestClaimExtension = claimExtensions[i];
+            }
         }
     }
 
