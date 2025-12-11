@@ -454,7 +454,7 @@ contract SLAAllocatorTest is Test {
         });
 
         bytes memory signature =
-            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee9ff"; // ostatni bajt zmieniony
+            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee9ff";
 
         SLAAllocator.PassportSigned memory signed =
             SLAAllocator.PassportSigned({passport: passport, signature: signature});
@@ -490,7 +490,7 @@ contract SLAAllocatorTest is Test {
         });
 
         bytes memory signature =
-            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde18507ff"; // ostatni bajt zmieniony
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde18507ff";
 
         SLAAllocator.PaymentTransactionSigned memory signed =
             SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
@@ -532,7 +532,7 @@ contract SLAAllocatorTest is Test {
         });
 
         bytes memory signature =
-            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e0120ff"; // ostatni bajt zmieniony
+            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e0120ff";
 
         SLAAllocator.ManualAttestationSigned memory signed =
             SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
