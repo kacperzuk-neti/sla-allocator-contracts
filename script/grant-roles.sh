@@ -49,6 +49,9 @@ grantRole "$SLA_ALLOCATOR" UPGRADER_ROLE "$recipient"
 grantRole "$SLA_ALLOCATOR" MANAGER_ROLE "$recipient"
 ((nonce += 1))
 
+grantRole "$SLA_ALLOCATOR" ATTESTATOR_ROLE "$recipient"
+((nonce += 1))
+
 grantRole "$BENEFICIARY_FACTORY" DEFAULT_ADMIN_ROLE "$recipient"
 ((nonce += 1))
 

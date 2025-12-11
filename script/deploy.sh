@@ -23,7 +23,7 @@ function deploySLAAllocator() {
   local impl calldata
   impl=$(_deploy SLAAllocator)
   ((nonce += 1))
-  calldata=$(cast calldata 'initialize(address,address)' "$ADMIN" "$ADMIN")
+  calldata=$(cast calldata 'initialize(address,address,address)' "$ADMIN" "$ADMIN" "$ADMIN")
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 

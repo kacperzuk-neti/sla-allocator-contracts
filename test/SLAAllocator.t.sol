@@ -7,6 +7,7 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 
@@ -27,11 +28,13 @@ import {MockBeneficiaryFactory} from "./contracts/MockBeneficiaryFactory.sol";
 import {ResolveAddressPrecompileMock} from "../test/contracts/ResolveAddressPrecompileMock.sol";
 import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdConverter.sol";
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
+import {VerifySignaturesHelper} from "../test/contracts/VerifySignaturesHelper.sol";
 
 // solhint-disable-next-line max-states-count
 contract SLAAllocatorTest is Test {
     SLAAllocator public slaAllocator;
     MockSLARegistry public slaRegistry;
+    VerifySignaturesHelper public verifySignaturesHelper;
     Client public clientSmartContract;
     SLAAllocator.SLA[] public slas;
     ActorIdMock public actorIdMock;
@@ -53,7 +56,10 @@ contract SLAAllocatorTest is Test {
 
     address public admin = vm.addr(1);
     address public manager = vm.addr(2);
-    address public unauthorized = vm.addr(5);
+    uint256 public unauthorizedKey = 0xBBB;
+    address public unauthorized = vm.addr(unauthorizedKey);
+    uint256 public attestorKey = 0xAAA;
+    address public attestor = vm.addr(attestorKey);
 
     function setUp() public {
         actorIdMock = new ActorIdMock();
@@ -68,10 +74,14 @@ contract SLAAllocatorTest is Test {
         vm.etch(CALL_ACTOR_ID, address(actorIdMock).code);
         vm.etch(address(5555), address(actorIdProxy).code);
         SLAAllocator impl = new SLAAllocator();
-        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (admin, manager));
+        VerifySignaturesHelper impl2 = new VerifySignaturesHelper();
+        bytes memory initData = abi.encodeCall(SLAAllocator.initialize, (admin, manager, attestor));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
+        ERC1967Proxy proxyHelper = new ERC1967Proxy(address(impl2), initData);
         slaAllocator = SLAAllocator(address(proxy));
         slaAllocator.initialize2(clientSmartContract, mockBeneficiaryFactory);
+        verifySignaturesHelper = VerifySignaturesHelper(address(proxyHelper));
+        verifySignaturesHelper.initialize2(clientSmartContract, mockBeneficiaryFactory);
 
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
     }
@@ -198,7 +208,7 @@ contract SLAAllocatorTest is Test {
 
     function testCantBeReinitialized() public {
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
-        slaAllocator.initialize(address(2), address(2));
+        slaAllocator.initialize(address(2), address(2), address(3));
 
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
         slaAllocator.initialize2(Client(address(2)), BeneficiaryFactory(address(1)));
@@ -349,5 +359,185 @@ contract SLAAllocatorTest is Test {
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
         );
         slaAllocator.setClientSmartContract(newClientSmartContract);
+    }
+
+    function testVerifyPassportSigned() public view {
+        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
+            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOffChain = 0xe4473ea9d9322580ba9176aaf92e816e5fb409f88767d41e27362b59a923e3f4;
+
+        assertEq(digestOnChain, digestOffChain);
+
+        bytes memory signature =
+            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee91b";
+
+        SLAAllocator.PassportSigned memory signed =
+            SLAAllocator.PassportSigned({passport: passport, signature: signature});
+
+        bool verified = verifySignaturesHelper.verifyPassportSignedExt(signed);
+        assertTrue(verified, "Signature invalid");
+    }
+
+    function testVerifyPaymentTransactionSignature() public view {
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOffChain = 0xeb2d73b584bf46b56d41777d6ff22c88a8c39d3638acda00f1216637c8935662;
+
+        assertEq(digestOnChain, digestOffChain);
+
+        bytes memory signature =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
+
+        SLAAllocator.PaymentTransactionSigned memory signed =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        bool verified = verifySignaturesHelper.verifyPaymentTransactionSignedExt(signed);
+        assertTrue(verified, "Signature invalid");
+    }
+
+    function testVerifyManualAttestationSignature() public view {
+        bytes32 attestationId = bytes32(uint256(1));
+
+        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
+            attestationId: attestationId,
+            client: 0x0000000000000000000000000000000000000123,
+            provider: SP1,
+            amount: 1,
+            opaqueData: "data"
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(att);
+        bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
+        bytes32 digestOffChain = 0xd78d976d5f4f8827cce3b16f23a691baafdf9269541d9a21b84233567d585000;
+
+        assertEq(digestOnChain, digestOffChain);
+
+        bytes memory signature =
+            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
+
+        SLAAllocator.ManualAttestationSigned memory signed =
+            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+
+        bool verified = verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
+        assertTrue(verified, "Signature invalid");
+    }
+
+    function testVerifyPassportSignedWrongData() public view {
+        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
+            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000124, score: 100
+        });
+
+        bytes memory signature =
+            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee91b";
+
+        SLAAllocator.PassportSigned memory signed =
+            SLAAllocator.PassportSigned({passport: passport, signature: signature});
+
+        bool notVerified = verifySignaturesHelper.verifyPassportSignedExt(signed);
+        assertFalse(notVerified, "Signature valid");
+    }
+
+    function testVerifyPassportSignedWrongSignature() public {
+        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
+            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
+        });
+
+        bytes memory signature =
+            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee9ff";
+
+        SLAAllocator.PassportSigned memory signed =
+            SLAAllocator.PassportSigned({passport: passport, signature: signature});
+
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
+        verifySignaturesHelper.verifyPassportSignedExt(signed);
+    }
+
+    function testVerifyPaymentTransactionSignatureWrongData() public view {
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 2
+        });
+
+        bytes memory signature =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
+
+        SLAAllocator.PaymentTransactionSigned memory signed =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        bool notVerified = verifySignaturesHelper.verifyPaymentTransactionSignedExt(signed);
+        assertFalse(notVerified, "Signature valid");
+    }
+
+    function testVerifyPaymentTransactionSignatureWrongSignature() public {
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes memory signature =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde18507ff";
+
+        SLAAllocator.PaymentTransactionSigned memory signed =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
+        verifySignaturesHelper.verifyPaymentTransactionSignedExt(signed);
+    }
+
+    function testVerifyManualAttestationSignatureWrongData() public view {
+        bytes32 attestationId = bytes32(uint256(1));
+
+        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
+            attestationId: attestationId,
+            client: 0x0000000000000000000000000000000000000123,
+            provider: SP1,
+            amount: 2,
+            opaqueData: "data"
+        });
+
+        bytes memory signature =
+            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
+
+        SLAAllocator.ManualAttestationSigned memory signed =
+            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+
+        bool notVerified = verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
+        assertFalse(notVerified, "Signature valid");
+    }
+
+    function testVerifyManualAttestationSignatureWrongSignature() public {
+        bytes32 attestationId = bytes32(uint256(1));
+
+        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
+            attestationId: attestationId,
+            client: 0x0000000000000000000000000000000000000123,
+            provider: SP1,
+            amount: 1,
+            opaqueData: "data"
+        });
+
+        bytes memory signature =
+            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e0120ff";
+
+        SLAAllocator.ManualAttestationSigned memory signed =
+            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
+        verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
     }
 }

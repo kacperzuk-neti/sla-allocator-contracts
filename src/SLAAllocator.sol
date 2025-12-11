@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
@@ -20,10 +22,46 @@ import {SLARegistry} from "./SLARegistry.sol";
  * @notice Upgradeable contract for SLA allocation with role-based access control
  * @dev This contract is designed to be deployed as a proxy contract
  */
-contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable {
     struct SLA {
         SLARegistry registry;
         CommonTypes.FilActorId provider;
+    }
+
+    struct Passport {
+        uint256 expirationTimestamp;
+        address subject;
+        uint64 score;
+    }
+
+    struct PassportSigned {
+        Passport passport;
+        bytes signature;
+    }
+
+    struct ManualAttestation {
+        bytes32 attestationId;
+        address client;
+        CommonTypes.FilActorId provider;
+        uint256 amount;
+        string opaqueData;
+    }
+
+    struct ManualAttestationSigned {
+        ManualAttestation attestation;
+        bytes signature;
+    }
+
+    struct PaymentTransaction {
+        bytes id;
+        CommonTypes.FilAddress from;
+        CommonTypes.FilAddress to;
+        uint256 amount;
+    }
+
+    struct PaymentTransactionSigned {
+        PaymentTransaction txn;
+        bytes signature;
     }
 
     /**
@@ -44,6 +82,32 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Manager role which allows to manage datacap
      */
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
+    /**
+     * @notice Attestor role which allows sign attestations
+     */
+    bytes32 public constant ATTESTATOR_ROLE = keccak256("ATTESTATOR_ROLE");
+
+    // solhint-disable gas-small-strings
+    /**
+     * @notice EIP-712 typehash for Passport struct
+     */
+    bytes32 private constant PASSPORT_TYPEHASH =
+        keccak256("Passport(uint256 expirationTimestamp,address subject,uint64 score)");
+
+    /**
+     * @notice EIP-712 typehash for PaymentTransaction struct
+     */
+    bytes32 private constant PAYMENT_TX_TYPEHASH =
+        keccak256("PaymentTransaction(bytes id,bytes from,bytes to,uint256 amount)");
+
+    /**
+     * @notice EIP-712 typehash for ManualAttestation struct
+     */
+    bytes32 private constant MANUAL_ATTESTATION_TYPEHASH = keccak256(
+        "ManualAttestation(bytes32 attestationId,address client,uint64 provider,uint256 amount,string opaqueData)"
+    );
+    // solhint-enable gas-small-strings
 
     // solhint-disable gas-indexed-events
     /**
@@ -130,13 +194,16 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Contract initializer. Should be called during deployment to configure roles and addresses.
      * @param admin Contract owner (granted DEFAULT_ADMIN_ROLE and UPGRADER_ROLE)
      * @param manager Manager address (granted MANAGER_ROLE)
+     * @param attestor Attestor address (granted ATTESTATOR_ROLE)
      */
-    function initialize(address admin, address manager) external initializer {
+    function initialize(address admin, address manager, address attestor) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
+        __EIP712_init("SLAAllocator", "1");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
+        _grantRole(ATTESTATOR_ROLE, attestor);
     }
 
     /**
@@ -256,5 +323,89 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     function setClientSmartContract(Client newClientSmartContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
         clientSmartContract = newClientSmartContract;
         emit ClientSmartContractSet(newClientSmartContract);
+    }
+
+    /**
+     * @notice Verify signed Passport
+     * @param passport PassportSigned struct
+     * @return True if signature is valid and signer has ATTESTATOR_ROLE
+     */
+    function verifyPassportSigned(PassportSigned calldata passport) internal view returns (bool) {
+        bytes32 structHash = _hashPassport(passport.passport);
+        address signer = _recoverFromSig(structHash, passport.signature);
+        return signer != address(0) && hasRole(ATTESTATOR_ROLE, signer);
+    }
+
+    /**
+     * @notice Verify signed PaymentTransaction
+     * @param txn PaymentTransactionSigned struct
+     * @return True if signature is valid and signer has ATTESTATOR_ROLE
+     */
+    function verifyPaymentTransactionSigned(PaymentTransactionSigned calldata txn) internal view returns (bool) {
+        bytes32 structHash = _hashPaymentTransaction(txn.txn);
+        address signer = _recoverFromSig(structHash, txn.signature);
+        return signer != address(0) && hasRole(ATTESTATOR_ROLE, signer);
+    }
+
+    /**
+     * @notice Verify signed ManualAttestation
+     * @param attestation ManualAttestationSigned struct
+     * @return True if signature is valid and signer has ATTESTATOR_ROLE
+     */
+    function verifyManualAttestationSigned(ManualAttestationSigned calldata attestation) internal view returns (bool) {
+        bytes32 structHash = _hashManualAttestation(attestation.attestation);
+        address signer = _recoverFromSig(structHash, attestation.signature);
+        return signer != address(0) && hasRole(ATTESTATOR_ROLE, signer);
+    }
+
+    /**
+     * @notice Hash Passport struct
+     * @param passport Passport struct
+     * @return Hash of the struct
+     */
+    function _hashPassport(Passport calldata passport) internal pure returns (bytes32) {
+        return keccak256(abi.encode(PASSPORT_TYPEHASH, passport.expirationTimestamp, passport.subject, passport.score));
+    }
+
+    /**
+     * @notice Hash PaymentTransaction struct
+     * @param txn PaymentTransaction struct
+     * @return Hash of the struct
+     */
+    function _hashPaymentTransaction(PaymentTransaction calldata txn) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                PAYMENT_TX_TYPEHASH, keccak256(txn.id), keccak256(txn.from.data), keccak256(txn.to.data), txn.amount
+            )
+        );
+    }
+
+    /**
+     * @notice Hash ManualAttestation struct
+     * @param attestation ManualAttestation struct
+     * @return Hash of the struct
+     */
+    function _hashManualAttestation(ManualAttestation calldata attestation) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                MANUAL_ATTESTATION_TYPEHASH,
+                attestation.attestationId,
+                attestation.client,
+                attestation.provider,
+                attestation.amount,
+                keccak256(bytes(attestation.opaqueData))
+            )
+        );
+    }
+
+    /**
+     * @notice Recover address from signature over struct hash
+     * @param structHash Hash of the struct
+     * @param signature bytes
+     * @return Address that signed the struct
+     */
+    function _recoverFromSig(bytes32 structHash, bytes calldata signature) internal view returns (address) {
+        bytes32 digest = _hashTypedDataV4(structHash);
+        return ECDSA.recover(digest, signature);
     }
 }
