@@ -292,6 +292,7 @@ contract ClientTest is Test {
 
     function testClaimExtensionNonExistent() public {
         // 0 success_count
+        resolveAddress.setId(uint64(20000));
         actorIdMock.setGetClaimsResult(hex"8282008080");
         transferParams.operator_data = hex"82808183194E20011A005034AC";
         vm.prank(clientAddress);
@@ -303,6 +304,7 @@ contract ClientTest is Test {
         // params taken directly from `boost extend-deal` message
         // no allocations
         // 1 extension for provider 20000 and claim id 1
+        resolveAddress.setId(uint64(20000));
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
         transferParams.operator_data = hex"82808183194E20011A005034AC";
