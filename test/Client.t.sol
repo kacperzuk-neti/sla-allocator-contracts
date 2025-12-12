@@ -255,7 +255,7 @@ contract ClientTest is Test {
             amount: CommonTypes.BigInt({
                 val: hex"010000000000000000000000000000000000000000000000000000000000000000", neg: false
             }),
-            operator_data: hex"8282861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A00503340190131861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
+            operator_data: hex"8282861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001B00000078B30C40001A00503340190131861903E8D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
         });
         vm.prank(clientAddress);
         vm.expectRevert(abi.encodeWithSelector(Client.InvalidAmount.selector));
@@ -288,12 +288,18 @@ contract ClientTest is Test {
     }
 
     function testTransferRevertInsufficientAllowance() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+
         vm.prank(clientAddress);
         vm.expectRevert(abi.encodeWithSelector(Client.InsufficientAllowance.selector));
         client.transfer(transferParams);
     }
 
     function testClientCanCallTransfer() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
         vm.prank(clientAddress);
@@ -301,6 +307,9 @@ contract ClientTest is Test {
     }
 
     function testVerifregFailIsDetected() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
         vm.etch(CALL_ACTOR_ID, address(builtInActorForTransferFunctionMock).code);
@@ -310,6 +319,9 @@ contract ClientTest is Test {
     }
 
     function testCheckAllowanceAfterTransfer() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
         vm.prank(clientAddress);
@@ -319,7 +331,7 @@ contract ClientTest is Test {
 
     function testClaimExtensionNonExistent() public {
         // 0 success_count
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
         actorIdMock.setGetClaimsResult(hex"8282008080");
         transferParams.operator_data = hex"82808183194E20011A005034AC";
         vm.prank(clientAddress);
@@ -331,7 +343,8 @@ contract ClientTest is Test {
         // params taken directly from `boost extend-deal` message
         // no allocations
         // 1 extension for provider 20000 and claim id 1
-        resolveAddress.setId(uint64(20000));
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
         transferParams.operator_data = hex"82808183194E20011A005034AC";
@@ -376,6 +389,8 @@ contract ClientTest is Test {
     }
 
     function testSPClientsMappingUpdateAllocations() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00c2a101", uint64(20000));
         vm.prank(allocator);
         client.increaseAllowance(clientAddress, SP2, 4096);
 
@@ -553,6 +568,39 @@ contract ClientTest is Test {
         client.increaseAllowance(clientAddress, SP2, 4096);
         vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidSecondElement.selector));
         vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+    
+    function testTransferRevertNoAllocationOrClaim() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        transferParams.operator_data = hex"828080";
+        vm.prank(clientAddress);
+        vm.expectRevert(abi.encodeWithSelector(Client.NoAllocationOrClaim.selector));
+        client.transfer(transferParams);
+    }
+
+    function testTransferRevertInsufficientBeneficiaryExpiration() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        transferParams.operator_data =
+            hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001B00000078B30C40001B000004C7C203500019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E90019020D19013180";
+        vm.prank(clientAddress);
+        vm.expectRevert(
+            abi.encodeWithSelector(Client.InsufficientBeneficiaryExpiration.selector, SP2, 6000000, 5256000000305)
+        );
+        client.transfer(transferParams);
+    }
+
+    function testTransferRevertInsufficientExpirationForClaimExtension() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        transferParams.operator_data =
+            hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001B00000078B30C40001B000004C7C203500019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001B000004C7C203500019013180";
+        vm.prank(clientAddress);
+        vm.expectRevert(
+            abi.encodeWithSelector(Client.InsufficientBeneficiaryExpiration.selector, SP2, 6000000, 5256000000305)
+        );
         client.transfer(transferParams);
     }
 }
