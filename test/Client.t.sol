@@ -396,6 +396,10 @@ contract ClientTest is Test {
         assertEq(afterTransfer[0].usage, 2048);
     }
 
+    /**
+     * allocations: []
+     * claimExtensions: []
+     */
     function testTransferRevertNoAllocationOrClaim() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
@@ -405,26 +409,48 @@ contract ClientTest is Test {
         client.transfer(transferParams);
     }
 
+    /**
+     * allocations: [{
+     *   provider: 20000,
+     *   expiration: 5250000000000,
+     *   termMax: 1250000000000
+     * },{
+     *   provider: 20000,
+     *   expiration: 518400,
+     *   termMax: 525
+     * }]
+     * claimExtensions: []
+     */
     function testTransferRevertInsufficientBeneficiaryExpiration() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         transferParams.operator_data =
-            hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001B00000078B30C40001B000004C7C203500019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E90019020D19013180";
+            hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001914401B000004C65C6294001B0000012309CE540086194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E90019020D19013180";
         vm.prank(clientAddress);
         vm.expectRevert(
-            abi.encodeWithSelector(Client.InsufficientBeneficiaryExpiration.selector, SP2, 6000000, 5256000000305)
+            abi.encodeWithSelector(
+                Client.InsufficientBeneficiaryAllocationExpiration.selector, SP2, 6000000, 6500000000000
+            )
         );
         client.transfer(transferParams);
     }
 
+    /**
+     * allocations: []
+     * claimExtensions: [{
+     *   provider: 20000,
+     *   termMax: 1250000000000
+     * }]
+     */
     function testTransferRevertInsufficientExpirationForClaimExtension() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
-        transferParams.operator_data =
-            hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001B00000078B30C40001B000004C7C203500019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001B000004C7C203500019013180";
+        transferParams.operator_data = hex"82808183194E201927101B0000012309CE5400";
         vm.prank(clientAddress);
         vm.expectRevert(
-            abi.encodeWithSelector(Client.InsufficientBeneficiaryExpiration.selector, SP2, 6000000, 5256000000305)
+            abi.encodeWithSelector(
+                Client.InsufficientBeneficiaryClaimExtensionExpiration.selector, SP2, 6000000, 1250000000000
+            )
         );
         client.transfer(transferParams);
     }
