@@ -164,10 +164,17 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     error AllocationNotFound(CommonTypes.FilActorId provider, address client, uint64 allocationId);
 
     /**
-     * @notice Thrown if beneficiary expiration is insufficient
+     * @notice Thrown if beneficiary allocation expiration is insufficient
      */
-    error InsufficientBeneficiaryExpiration(
+    error InsufficientBeneficiaryAllocationExpiration(
         CommonTypes.FilActorId provider, int64 beneficiaryExpiration, int64 requiredExpiration
+    );
+
+    /**
+     * @notice Thrown if beneficiary claim extension expiration is insufficient
+     */
+    error InsufficientBeneficiaryClaimExtensionExpiration(
+        CommonTypes.FilActorId provider, int64 claimExpiration, int64 requiredExpiration
     );
 
     /**
@@ -404,7 +411,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             int64 beneficiaryExpiration = CommonTypes.ChainEpoch.unwrap(beneficiary.active.term.expiration);
 
             if (int64(longestClaimExtension.termMax) > beneficiaryExpiration + 250 weeks) {
-                revert InsufficientBeneficiaryExpiration(
+                revert InsufficientBeneficiaryClaimExtensionExpiration(
                     longestClaimExtension.provider, beneficiaryExpiration, longestClaimExtension.termMax
                 );
             }
@@ -417,7 +424,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             beneficiaryExpiration = CommonTypes.ChainEpoch.unwrap(beneficiary.active.term.expiration);
 
             if (int64(longestAllocation.allocationTime) > beneficiaryExpiration + 180 days) {
-                revert InsufficientBeneficiaryExpiration(
+                revert InsufficientBeneficiaryAllocationExpiration(
                     longestAllocation.provider, beneficiaryExpiration, longestAllocation.allocationTime
                 );
             }
