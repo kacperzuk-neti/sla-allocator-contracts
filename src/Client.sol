@@ -410,7 +410,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             );
             int64 beneficiaryExpiration = CommonTypes.ChainEpoch.unwrap(beneficiary.active.term.expiration);
 
-            if (int64(longestClaimExtension.termMax) > beneficiaryExpiration + 250 weeks) {
+            if (longestClaimExtension.termMax > beneficiaryExpiration + 250 weeks) {
                 revert InsufficientBeneficiaryClaimExtensionExpiration(
                     longestClaimExtension.provider, beneficiaryExpiration, longestClaimExtension.termMax
                 );
@@ -423,7 +423,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 MinerUtils.getBeneficiaryWithChecks(longestAllocation.provider, beneficiaryFactory, true, true, true);
             beneficiaryExpiration = CommonTypes.ChainEpoch.unwrap(beneficiary.active.term.expiration);
 
-            if (int64(longestAllocation.allocationTime) > beneficiaryExpiration + 180 days) {
+            if (longestAllocation.allocationTime > beneficiaryExpiration + 180 days) {
                 revert InsufficientBeneficiaryAllocationExpiration(
                     longestAllocation.provider, beneficiaryExpiration, longestAllocation.allocationTime
                 );
