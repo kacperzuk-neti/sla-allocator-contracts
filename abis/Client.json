@@ -728,6 +728,236 @@
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "debugBeneficiary",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct MinerTypes.GetBeneficiaryReturn",
+        "components": [
+          {
+            "name": "active",
+            "type": "tuple",
+            "internalType": "struct MinerTypes.ActiveBeneficiary",
+            "components": [
+              {
+                "name": "beneficiary",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "term",
+                "type": "tuple",
+                "internalType": "struct MinerTypes.BeneficiaryTerm",
+                "components": [
+                  {
+                    "name": "quota",
+                    "type": "tuple",
+                    "internalType": "struct CommonTypes.BigInt",
+                    "components": [
+                      {
+                        "name": "val",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "neg",
+                        "type": "bool",
+                        "internalType": "bool"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "used_quota",
+                    "type": "tuple",
+                    "internalType": "struct CommonTypes.BigInt",
+                    "components": [
+                      {
+                        "name": "val",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "neg",
+                        "type": "bool",
+                        "internalType": "bool"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "expiration",
+                    "type": "int64",
+                    "internalType": "CommonTypes.ChainEpoch"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "proposed",
+            "type": "tuple",
+            "internalType": "struct MinerTypes.PendingBeneficiaryChange",
+            "components": [
+              {
+                "name": "new_beneficiary",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "new_quota",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.BigInt",
+                "components": [
+                  {
+                    "name": "val",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "neg",
+                    "type": "bool",
+                    "internalType": "bool"
+                  }
+                ]
+              },
+              {
+                "name": "new_expiration",
+                "type": "int64",
+                "internalType": "CommonTypes.ChainEpoch"
+              },
+              {
+                "name": "approved_by_beneficiary",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "approved_by_nominee",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "debugDeserialize",
+    "inputs": [
+      {
+        "name": "allocations",
+        "type": "tuple[]",
+        "indexed": false,
+        "internalType": "struct Client.ProviderAllocation[]",
+        "components": [
+          {
+            "name": "provider",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          },
+          {
+            "name": "size",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "allocationTime",
+            "type": "int64",
+            "internalType": "int64"
+          }
+        ]
+      },
+      {
+        "name": "claimExtensions",
+        "type": "tuple[]",
+        "indexed": false,
+        "internalType": "struct Client.ProviderClaim[]",
+        "components": [
+          {
+            "name": "provider",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          },
+          {
+            "name": "claim",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          },
+          {
+            "name": "termMax",
+            "type": "int64",
+            "internalType": "int64"
+          }
+        ]
+      },
+      {
+        "name": "longestAllocation",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Client.ProviderAllocation",
+        "components": [
+          {
+            "name": "provider",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          },
+          {
+            "name": "size",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "allocationTime",
+            "type": "int64",
+            "internalType": "int64"
+          }
+        ]
+      },
+      {
+        "name": "longestClaimExtension",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Client.ProviderClaim",
+        "components": [
+          {
+            "name": "provider",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          },
+          {
+            "name": "claim",
+            "type": "uint64",
+            "internalType": "CommonTypes.FilActorId"
+          },
+          {
+            "name": "termMax",
+            "type": "int64",
+            "internalType": "int64"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -855,6 +1085,27 @@
     "type": "error",
     "name": "InsufficientAllowance",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientBeneficiaryExpiration",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "beneficiaryExpiration",
+        "type": "int64",
+        "internalType": "int64"
+      },
+      {
+        "name": "requiredExpiration",
+        "type": "int64",
+        "internalType": "int64"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1001,6 +1252,11 @@
   {
     "type": "error",
     "name": "NegativeValueNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoAllocationOrClaim",
     "inputs": []
   },
   {
