@@ -387,6 +387,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
      * @notice Verifies that the beneficiary expiration is sufficient for the longest allocation.
      * @param longestAllocation The longest allocation.
+     * @param longestClaimExtension The longest claim extension.
      * @dev Reverts with InsufficientBeneficiaryExpiration if the beneficiary expiration is insufficient.
      */
     function _verifyBeneficiaryExpiration(
