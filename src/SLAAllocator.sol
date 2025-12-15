@@ -23,6 +23,31 @@ import {SLARegistry} from "./SLARegistry.sol";
  * @dev This contract is designed to be deployed as a proxy contract
  */
 contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable {
+    /**
+     * @notice Error thrown when attestation has already been used
+     */
+    error AttestationAlreadyUsed();
+
+    /**
+     * @notice Error thrown when attestation signature is not verified
+     */
+    error AttestationNotVerified();
+
+    /**
+     * @notice Error thrown when client in attestation doesn't match caller
+     */
+    error ClientMismatch();
+
+    /**
+     * @notice Error thrown when provider in attestation doesn't match expected provider
+     */
+    error ProviderMismatch();
+
+    /**
+     * @notice Error thrown when amount in attestation doesn't match expected amount
+     */
+    error AmountMismatch();
+
     struct SLA {
         SLARegistry registry;
         CommonTypes.FilActorId provider;
@@ -145,6 +170,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         slaContracts;
 
     /**
+     * @notice Tracking for used manual attestations
+     */
+    mapping(bytes32 id => bool isUsed) public usedManualAttestations;
+
+    /**
      * @notice List of provider FilActorIds
      */
     CommonTypes.FilActorId[] public providers;
@@ -252,6 +282,83 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
             clientSmartContract.increaseAllowance(client, provider, amount);
         }
+    }
+
+    /**
+     * @notice Grants DataCap to a client based on a manual attestation
+     * @param provider Provider FilActorId
+     * @param slaContract SLA contract address
+     * @param amount Amount of DC to grant
+     * @param attestation Signed manual attestation
+     */
+    function requestDataCap(
+        CommonTypes.FilActorId provider,
+        address slaContract,
+        uint256 amount,
+        ManualAttestationSigned calldata attestation
+    ) external {
+        bytes32 attestationId = attestation.attestation.attestationId;
+        if (usedManualAttestations[attestationId]) {
+            revert AttestationAlreadyUsed();
+        }
+        usedManualAttestations[attestationId] = true;
+
+        bool isVerified = verifyManualAttestationSigned(attestation);
+        if (!isVerified) {
+            revert AttestationNotVerified();
+        }
+
+        address client = msg.sender;
+        address attestedClient = attestation.attestation.client;
+        if (attestedClient != client) {
+            revert ClientMismatch();
+        }
+
+        CommonTypes.FilActorId attestedProvider = attestation.attestation.provider;
+        if (CommonTypes.FilActorId.unwrap(attestedProvider) != CommonTypes.FilActorId.unwrap(provider)) {
+            revert ProviderMismatch();
+        }
+
+        uint256 attestedAmount = attestation.attestation.amount;
+        if (attestedAmount != amount) {
+            revert AmountMismatch();
+        }
+
+        SLARegistry registry = SLARegistry(slaContract);
+        _registerSLAAndGrant(client, provider, registry, amount);
+    }
+
+    /**
+     * @notice Internal function to register SLA and grant datacap
+     * @param client Client address
+     * @param provider Provider FilActorId
+     * @param registry SLARegistry contract
+     * @param amount Amount of datacap to grant
+     */
+    function _registerSLAAndGrant(
+        address client,
+        CommonTypes.FilActorId provider,
+        SLARegistry registry,
+        uint256 amount
+    ) internal {
+        // make sure SLA is registered (it doesnt revert)
+        registry.score(client, provider);
+
+        // make sure beneficiary is set correctly
+        MinerUtils.getBeneficiaryWithChecks(provider, beneficiaryFactory, true, true, true);
+
+        // update state
+        slaContracts[client][provider] = registry;
+        if (providerClients[provider] == address(0)) {
+            providerClients[provider] = client;
+            providers.push(provider);
+            emit SLARegistered(client, provider);
+        } else if (providerClients[provider] != client) {
+            revert ProviderBoundToDifferentClient();
+        }
+
+        clientSmartContract.increaseAllowance(client, provider, amount);
+        emit DataCapGranted(client, provider, amount);
     }
 
     // solhint-disable no-empty-blocks
