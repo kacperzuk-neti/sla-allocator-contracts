@@ -29,14 +29,29 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error AttestationAlreadyUsed();
 
     /**
+     * @notice Error thrown when PaymentTransaction is already used
+     */
+    error PaymentTxnAlreadyUsed();
+
+    /**
      * @notice Error thrown when attestation signature is not verified
      */
     error AttestationNotVerified();
 
     /**
+     * @notice Error thrown when payment transaction signature is not verified
+     */
+    error PaymentTxnNotVerified();
+
+    /**
      * @notice Error thrown when SLA is already registered
      */
     error SLAAlreadyRegistered();
+
+    /**
+     * @notice Error thrown when amount in attestation doesn't match expected amount
+     */
+    error AmountMismatch();
 
     struct SLA {
         SLARegistry registry;
@@ -163,6 +178,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Tracking for used manual attestations
      */
     mapping(bytes32 id => bool isUsed) public usedManualAttestations;
+
+    /**
+     * @notice Tracking for used payment transactions by id
+     */
+    mapping(bytes id => bool isUsed) public usedTransactions;
 
     /**
      * @notice List of provider FilActorIds
@@ -293,6 +313,40 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         bool isVerified = verifyManualAttestationSigned(attestation);
         if (!isVerified) {
             revert AttestationNotVerified();
+        }
+        
+        SLARegistry registry = SLARegistry(slaContract);
+        _registerSLAAndGrant(client, provider, registry, amount);
+        }
+
+    /**
+     * @notice Grants DataCap to a client without passport
+     * @param provider Provider FilActorId
+     * @param slaContract SLARegistry contract address
+     * @param amount Amount of DC to grant
+     * @param txn Signed payment transaction
+     */
+    function requestDataCap(
+        CommonTypes.FilActorId provider,
+        address slaContract,
+        uint256 amount,
+        PaymentTransactionSigned calldata txn
+    ) external {
+        address client = msg.sender;
+
+        bytes memory txnId = txn.txn.id;
+        if (usedTransactions[txnId]) {
+            revert PaymentTxnAlreadyUsed();
+        }
+        usedTransactions[txnId] = true;
+
+        bool isVerified = verifyPaymentTransactionSigned(txn);
+        if (!isVerified) {
+            revert PaymentTxnNotVerified();
+        }
+
+        if (amount != txn.txn.amount) {
+            revert AmountMismatch();
         }
 
         SLARegistry registry = SLARegistry(slaContract);

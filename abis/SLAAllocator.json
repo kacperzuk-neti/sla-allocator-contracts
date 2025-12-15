@@ -383,9 +383,19 @@
     "name": "requestDataCap",
     "inputs": [
       {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
         "name": "slaContract",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
         "name": "attestation",
@@ -805,6 +815,11 @@
   },
   {
     "type": "error",
+    "name": "AmountMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AttestationAlreadyUsed",
     "inputs": []
   },
@@ -821,6 +836,11 @@
   {
     "type": "error",
     "name": "BeneficiaryInstanceNonexistent",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ClientMismatch",
     "inputs": []
   },
   {
@@ -989,6 +1009,11 @@
   {
     "type": "error",
     "name": "ProviderBoundToDifferentClient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProviderMismatch",
     "inputs": []
   },
   {
