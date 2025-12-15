@@ -715,6 +715,48 @@
   },
   {
     "type": "error",
+    "name": "InsufficientBeneficiaryAllocationExpiration",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "beneficiaryExpiration",
+        "type": "int64",
+        "internalType": "int64"
+      },
+      {
+        "name": "requiredExpiration",
+        "type": "int64",
+        "internalType": "int64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InsufficientBeneficiaryClaimExtensionExpiration",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "claimExpiration",
+        "type": "int64",
+        "internalType": "int64"
+      },
+      {
+        "name": "requiredExpiration",
+        "type": "int64",
+        "internalType": "int64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidActorID",
     "inputs": [
       {
@@ -843,6 +885,11 @@
   {
     "type": "error",
     "name": "NegativeValueNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoAllocationOrClaim",
     "inputs": []
   },
   {
