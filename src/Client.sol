@@ -418,67 +418,70 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             ProviderClaim memory longestClaimExtension
         )
     {
-        uint256 operatorDataLength;
-        uint256 allocationRequestsLength;
-        uint256 claimExtensionRequestsLength;
+        uint256 resultLength;
         uint64 provider;
-        uint64 claimId;
-        uint64 size;
         int64 termMax;
         int64 expiration;
         uint256 byteIdx = 0;
 
-        (operatorDataLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
-        if (operatorDataLength != 2) revert InvalidOperatorData();
+        {
+            (resultLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
+            if (resultLength != 2) revert InvalidOperatorData();
+        }
+        {
+            uint64 size;
+            (resultLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
+            allocations = new ProviderAllocation[](resultLength);
+            for (uint256 i = 0; i < resultLength; i++) {
+                uint256 allocationRequestLength;
+                (allocationRequestLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
 
-        (allocationRequestsLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
-        allocations = new ProviderAllocation[](allocationRequestsLength);
-        for (uint256 i = 0; i < allocationRequestsLength; i++) {
-            uint256 allocationRequestLength;
-            (allocationRequestLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
+                if (allocationRequestLength != 6) {
+                    revert InvalidAllocationRequest();
+                }
 
-            if (allocationRequestLength != 6) {
-                revert InvalidAllocationRequest();
-            }
+                (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                // slither-disable-start unused-return
+                (, byteIdx) = CBORDecoder.readBytes(cborData, byteIdx); // data (CID)
+                (size, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // termMin
+                // slither-disable-end unused-return
+                (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+                (expiration, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
 
-            (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
-            // slither-disable-start unused-return
-            (, byteIdx) = CBORDecoder.readBytes(cborData, byteIdx); // data (CID)
-            (size, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
-            (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // termMin
-            // slither-disable-end unused-return
-            (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
-            (expiration, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+                allocations[i].provider = CommonTypes.FilActorId.wrap(provider);
+                allocations[i].size = size;
+                allocations[i].allocationTime = termMax + expiration;
 
-            allocations[i].provider = CommonTypes.FilActorId.wrap(provider);
-            allocations[i].size = size;
-            allocations[i].allocationTime = termMax + expiration;
-
-            if (allocations[i].allocationTime > longestAllocation.allocationTime) {
-                longestAllocation = allocations[i];
+                if (allocations[i].allocationTime > longestAllocation.allocationTime) {
+                    longestAllocation = allocations[i];
+                }
             }
         }
 
-        (claimExtensionRequestsLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
-        claimExtensions = new ProviderClaim[](claimExtensionRequestsLength);
-        for (uint256 i = 0; i < claimExtensionRequestsLength; i++) {
-            uint256 claimExtensionRequestLength;
-            (claimExtensionRequestLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
+        {
+            uint64 claimId;
+            (resultLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
+            claimExtensions = new ProviderClaim[](resultLength);
+            for (uint256 i = 0; i < resultLength; i++) {
+                uint256 claimExtensionRequestLength;
+                (claimExtensionRequestLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
 
-            if (claimExtensionRequestLength != 3) {
-                revert InvalidClaimExtensionRequest();
-            }
+                if (claimExtensionRequestLength != 3) {
+                    revert InvalidClaimExtensionRequest();
+                }
 
-            (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
-            (claimId, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
-            (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+                (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                (claimId, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
 
-            claimExtensions[i].provider = CommonTypes.FilActorId.wrap(provider);
-            claimExtensions[i].claim = CommonTypes.FilActorId.wrap(claimId);
-            claimExtensions[i].termMax = termMax;
+                claimExtensions[i].provider = CommonTypes.FilActorId.wrap(provider);
+                claimExtensions[i].claim = CommonTypes.FilActorId.wrap(claimId);
+                claimExtensions[i].termMax = termMax;
 
-            if (termMax > longestClaimExtension.termMax) {
-                longestClaimExtension = claimExtensions[i];
+                if (termMax > longestClaimExtension.termMax) {
+                    longestClaimExtension = claimExtensions[i];
+                }
             }
         }
     }
