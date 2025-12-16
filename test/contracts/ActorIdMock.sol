@@ -112,6 +112,11 @@ contract ActorIdMock {
         if (methodNum == 3916220144) {
             return handleAddVerifiedClient();
         }
+        if (methodNum == 3275365574) {
+            if (target == 20000) {
+                return abi.encode(0, 0x51, hex"824400C2A101f6");
+            }
+        }
         if (target == 6 && methodNum == 2199871187) {
             // verifreg get claims
             return abi.encode(0, 0x51, _getClaimsResult);
@@ -121,9 +126,6 @@ contract ActorIdMock {
             // return abi.encode(0, 0x51, hex"83808083410141024103");
             return abi.encode(0, 0x51, hex"834100410049838201808200808101");
         }
-        // if (target == 321 && methodNum == 3275365574) {
-        //     return abi.encode(0, 0x51, hex"824400A58B0140");
-        // }
         if (target == 321 && methodNum == 3275365574) {
             return abi.encode(0, 0x51, hex"824300C10240");
         }
