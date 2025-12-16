@@ -69,6 +69,7 @@ contract BeneficiaryTest is Test {
         FilAddresses.fromActorID(CommonTypes.FilActorId.unwrap(beneficiaryContractId));
     bytes public transferTo = abi.encodePacked(vm.addr(5));
     address public beneficiaryEthAddressContract;
+
     // solhint-enable var-name-mixedcase
     function setUp() public {
         actorIdMock = new ActorIdMock();
