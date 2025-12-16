@@ -540,4 +540,36 @@ contract SLAAllocatorTest is Test {
         vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
     }
+
+    function testRequestDataCapWithNoPasspportEmitEvent() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectEmit(true, true, false, true);
+        emit SLAAllocator.DataCapGranted(client, SP2, 1);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
 }
