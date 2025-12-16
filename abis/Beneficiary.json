@@ -36,7 +36,7 @@
   },
   {
     "type": "function",
-    "name": "TERMINATION_ORACLE",
+    "name": "WITHDRAWER_ROLE",
     "inputs": [],
     "outputs": [
       {
@@ -49,16 +49,16 @@
   },
   {
     "type": "function",
-    "name": "WITHDRAWER_ROLE",
-    "inputs": [],
-    "outputs": [
+    "name": "acceptBeneficiary",
+    "inputs": [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "minerId",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
-    "stateMutability": "view"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -349,6 +349,32 @@
   },
   {
     "type": "event",
+    "name": "BeneficiaryAccepted",
+    "inputs": [
+      {
+        "name": "minerID",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "newBeneficiary",
+        "type": "tuple",
+        "indexed": true,
+        "internalType": "struct CommonTypes.FilAddress",
+        "components": [
+          {
+            "name": "data",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "BeneficiaryProposalSigned",
     "inputs": [
       {
@@ -570,7 +596,22 @@
   },
   {
     "type": "error",
+    "name": "ExitCodeError",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailToCallActor",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedToGetActorID",
     "inputs": []
   },
   {
@@ -613,7 +654,43 @@
   },
   {
     "type": "error",
+    "name": "InvalidNewBeneficiary",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expectedBeneficiary",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidResponseLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NegativeValueNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NewExpirationBelowActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NewQuotaBelowActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoNewBeneficiaryProposed",
     "inputs": []
   },
   {
@@ -635,6 +712,11 @@
   {
     "type": "error",
     "name": "NotInitializing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "QuotaNotUnlimited",
     "inputs": []
   },
   {
