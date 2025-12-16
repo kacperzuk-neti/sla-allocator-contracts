@@ -11,18 +11,20 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
+import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 
 import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 import {Client} from "./Client.sol";
 import {SLARegistry} from "./SLARegistry.sol";
+import {RateLimited} from "./RateLimited.sol";
 
 /**
  * @title SLA Allocator
  * @notice Upgradeable contract for SLA allocation with role-based access control
  * @dev This contract is designed to be deployed as a proxy contract
  */
-contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable {
+contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable, RateLimited {
     /**
      * @notice Error thrown when PaymentTransaction is already used
      */
@@ -34,9 +36,19 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error PaymentTxnNotVerified();
 
     /**
+     * @notice Error thrown when transaction payer is the same as storage provider owner
+     */
+    error TxPayerSameAsSPOwner();
+
+    /**
      * @notice Error thrown when amount in attestation doesn't match expected amount
      */
     error AmountMismatch();
+
+    /**
+     * @notice Error thrown when amount exceeds non-passport limit
+     */
+    error AmountExceedsNonPassportLimit();
 
     struct SLA {
         SLARegistry registry;
@@ -123,6 +135,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         "ManualAttestation(bytes32 attestationId,address client,uint64 provider,uint256 amount,string opaqueData)"
     );
     // solhint-enable gas-small-strings
+
+    /**
+     * @notice Maximum amount of datacap that can be granted without a passport
+     */
+    uint256 private constant MAX_NON_PASSPORT_LIMIT = 100 * 2 ** 40;
 
     // solhint-disable gas-indexed-events
     /**
@@ -286,8 +303,20 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         address slaContract,
         uint256 amount,
         PaymentTransactionSigned calldata txn
-    ) external {
+    ) external globallyRateLimited {
         address client = msg.sender;
+
+        CommonTypes.FilAddress memory providerOwner = MinerUtils.getOwner(provider).owner;
+        uint64 resolvedProviderOwner = PrecompilesAPI.resolveAddress(providerOwner);
+        uint64 resolvedTxnFrom = PrecompilesAPI.resolveAddress(txn.txn.from);
+
+        if (resolvedProviderOwner == resolvedTxnFrom) {
+            revert TxPayerSameAsSPOwner();
+        }
+
+        if (amount > MAX_NON_PASSPORT_LIMIT) {
+            revert AmountExceedsNonPassportLimit();
+        }
 
         bytes memory txnId = txn.txn.id;
         if (usedTransactions[txnId]) {

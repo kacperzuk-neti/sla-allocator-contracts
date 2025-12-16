@@ -19,6 +19,32 @@
   },
   {
     "type": "function",
+    "name": "CLIENT_RATE_LIMIT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "CLIENT_RATE_LIMIT_TIME",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
     "inputs": [],
     "outputs": [
@@ -26,6 +52,32 @@
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "GLOBAL_RATE_LIMIT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "GLOBAL_RATE_LIMIT_TIME",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -398,39 +450,48 @@
         "internalType": "uint256"
       },
       {
-        "name": "attestation",
+        "name": "txn",
         "type": "tuple",
-        "internalType": "struct SLAAllocator.ManualAttestationSigned",
+        "internalType": "struct SLAAllocator.PaymentTransactionSigned",
         "components": [
           {
-            "name": "attestation",
+            "name": "txn",
             "type": "tuple",
-            "internalType": "struct SLAAllocator.ManualAttestation",
+            "internalType": "struct SLAAllocator.PaymentTransaction",
             "components": [
               {
-                "name": "attestationId",
-                "type": "bytes32",
-                "internalType": "bytes32"
+                "name": "id",
+                "type": "bytes",
+                "internalType": "bytes"
               },
               {
-                "name": "client",
-                "type": "address",
-                "internalType": "address"
+                "name": "from",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
               },
               {
-                "name": "provider",
-                "type": "uint64",
-                "internalType": "CommonTypes.FilActorId"
+                "name": "to",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
               },
               {
                 "name": "amount",
                 "type": "uint256",
                 "internalType": "uint256"
-              },
-              {
-                "name": "opaqueData",
-                "type": "string",
-                "internalType": "string"
               }
             ]
           },
@@ -552,12 +613,12 @@
   },
   {
     "type": "function",
-    "name": "usedManualAttestations",
+    "name": "usedTransactions",
     "inputs": [
       {
         "name": "id",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
     "outputs": [
@@ -815,17 +876,12 @@
   },
   {
     "type": "error",
+    "name": "AmountExceedsNonPassportLimit",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AmountMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AttestationAlreadyUsed",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AttestationNotVerified",
     "inputs": []
   },
   {
@@ -840,8 +896,19 @@
   },
   {
     "type": "error",
-    "name": "ClientMismatch",
-    "inputs": []
+    "name": "ClientRateLimitExceeded",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "timeToReset",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -929,6 +996,17 @@
   },
   {
     "type": "error",
+    "name": "GlobalRateLimitExceeded",
+    "inputs": [
+      {
+        "name": "timeToReset",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidActorID",
     "inputs": [
       {
@@ -1008,12 +1086,17 @@
   },
   {
     "type": "error",
-    "name": "ProviderBoundToDifferentClient",
+    "name": "PaymentTxnAlreadyUsed",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "ProviderMismatch",
+    "name": "PaymentTxnNotVerified",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProviderBoundToDifferentClient",
     "inputs": []
   },
   {
@@ -1029,6 +1112,11 @@
   {
     "type": "error",
     "name": "SLANotRegistered",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TxPayerSameAsSPOwner",
     "inputs": []
   },
   {
