@@ -10,6 +10,21 @@ import {Client} from "../../src/Client.sol";
 contract MockClientContract is Client {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
 
+    function deleteAllocationIdByValue(CommonTypes.FilActorId provider, address client, uint64 allocationId) external {
+        _deleteAllocationIdByValue(provider, client, allocationId);
+    }
+
+    function addTerminatedClaims(uint64 claim) external {
+        terminatedClaims[claim] = true;
+    }
+
+    function getClientAllocationIds(CommonTypes.FilActorId provider, address client)
+        external
+        returns (uint64[] memory)
+    {
+        return clientAllocationIdsPerProvider[provider][client];
+    }
+
     function addClientAllocationIds(CommonTypes.FilActorId provider, address client, uint64 allocationId) external {
         clientAllocationIdsPerProvider[provider][client].push(allocationId);
     }

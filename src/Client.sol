@@ -504,25 +504,12 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         clients = _spClients[provider].keys();
     }
 
-    /// @notice Retrieves all allocation IDs for a specific client from a given provider
-    /// @dev Returns an array of allocation IDs associated with the client on the specified provider
-    /// @param provider The Filecoin actor ID of the provider
-    /// @param client The Ethereum address of the client
-    /// @return An array of allocation IDs (uint64) allocated by the provider to the client
-    function getClientAllocationIds(CommonTypes.FilActorId provider, address client)
-        internal
-        view
-        returns (uint64[] memory)
-    {
-        return clientAllocationIdsPerProvider[provider][client];
-    }
-
     /// @notice Deletes an allocation ID from the client's allocation list for a given provider
     /// @dev Removes the allocation ID by swapping it with the last element and popping from the array. Reverts with AllocationNotFound if the allocation ID is not found
     /// @param provider The Filecoin actor ID of the provider
     /// @param client The Ethereum address of the client
     /// @param allocationId The allocation ID to delete
-    function deleteAllocationIdByValue(CommonTypes.FilActorId provider, address client, uint64 allocationId) internal {
+    function _deleteAllocationIdByValue(CommonTypes.FilActorId provider, address client, uint64 allocationId) internal {
         uint64[] storage ids = clientAllocationIdsPerProvider[provider][client];
 
         uint256 maxIdx = ids.length - 1;
@@ -540,8 +527,16 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         }
     }
 
+    /**
+     * @notice Calculates the total active data size for a client with a specific provider
+     * @dev Iterates through the client's allocation IDs, retrieves their claims, and sums up the sizes of active claims
+     *      Removes allocation IDs associated with expired or terminated claims
+     * @param client The Ethereum address of the client
+     * @param provider The Filecoin actor ID of the provider
+     * @return totalSizePerSp The total active data size for the client with the specified provider
+     */
     function getClientSpActiveDataSize(address client, CommonTypes.FilActorId provider) external returns (uint256) {
-        uint64[] memory clientAllocationIds = getClientAllocationIds(provider, client);
+        uint64[] memory clientAllocationIds = clientAllocationIdsPerProvider[provider][client];
         VerifRegTypes.GetClaimsParams memory getClaimsParams = VerifRegTypes.GetClaimsParams({
             provider: provider, claim_ids: FilecoinConverter.allocationIdsToClaimIds(clientAllocationIds)
         });
@@ -568,7 +563,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                         CommonTypes.FilActorId.unwrap(getClaimsResult.claims[i - failCodesIterator].sector)
                     ]
             ) {
-                deleteAllocationIdByValue(provider, client, clientAllocationIds[i]);
+                _deleteAllocationIdByValue(provider, client, clientAllocationIds[i]);
                 continue;
             }
             totalSizePerSp += getClaimsResult.claims[i - failCodesIterator].size;

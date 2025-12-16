@@ -18,7 +18,14 @@ import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddr
 import {BuiltInActorForTransferFunctionMock} from "./contracts/BuiltInActorForTransferFunctionMock.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {MockClientContract} from "./contracts/MockClientContract.sol";
+import {FailingMockInvalidTopLevelArray} from "./contracts/FailingMockInvalidTopLevelArray.sol";
+import {FailingMockInvalidFirstElementLength} from "./contracts/FailingMockInvalidFirstElementLength.sol";
+import {FailingMockInvalidFirstElementInnerLength} from "./contracts/FailingMockInvalidFirstElementInnerLength.sol";
+import {FailingMockInvalidSecondElementLength} from "./contracts/FailingMockInvalidSecondElementLength.sol";
+import {FailingMockInvalidSecondElementInnerLength} from "./contracts/FailingMockInvalidSecondElementInnerLength.sol";
+import {AllocationResponseCbor} from "../src/libs/AllocationResponseCbor.sol";
 
+// solhint-disable max-states-count
 contract ClientTest is Test {
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
     address public datacapContract = address(0xfF00000000000000000000000000000000000007);
@@ -36,6 +43,11 @@ contract ClientTest is Test {
 
     MockBeneficiaryFactory public mockBeneficiaryFactory;
     ActorIdExitCodeErrorFailingMock public actorIdExitCodeErrorFailingMock;
+    FailingMockInvalidTopLevelArray public failingMockInvalidTopLevelArray;
+    FailingMockInvalidFirstElementLength public failingMockInvalidFirstElementLength;
+    FailingMockInvalidFirstElementInnerLength public failingMockInvalidFirstElementInnerLength;
+    FailingMockInvalidSecondElementLength public failingMockInvalidSecondElementLength;
+    FailingMockInvalidSecondElementInnerLength public failingMockInvalidSecondElementInnerLength;
     BuiltInActorForTransferFunctionMock public builtInActorForTransferFunctionMock;
     ActorIdMock public actorIdMock;
     ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
@@ -62,28 +74,28 @@ contract ClientTest is Test {
             mockBeneficiaryFactory,
             terminationOracle
         );
-
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         client = Client(address(proxy));
         clientContractMock = new MockClientContract();
         actorIdMock = new ActorIdMock();
         actorIdExitCodeErrorFailingMock = new ActorIdExitCodeErrorFailingMock();
+        failingMockInvalidTopLevelArray = new FailingMockInvalidTopLevelArray();
+        failingMockInvalidFirstElementLength = new FailingMockInvalidFirstElementLength();
+        failingMockInvalidFirstElementInnerLength = new FailingMockInvalidFirstElementInnerLength();
+        failingMockInvalidSecondElementLength = new FailingMockInvalidSecondElementLength();
+        failingMockInvalidSecondElementInnerLength = new FailingMockInvalidSecondElementInnerLength();
         resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
         resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
         builtInActorForTransferFunctionMock = new BuiltInActorForTransferFunctionMock();
-
         earlyTerminatedClaims.push(1);
-
         address actorIdProxy = address(new MockProxy(address(5555)));
         vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
         vm.etch(address(5555), address(actorIdMock).code);
         actorIdMock = ActorIdMock(payable(address(5555)));
         vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
-
         actorIdMock.setGetClaimsResult(
             hex"8282018081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
         );
-
         // --- Dummy transfer params ---
         transferParams = DataCapTypes.TransferParams({
             to: CommonTypes.FilAddress(transferTo),
@@ -92,7 +104,6 @@ contract ClientTest is Test {
             //    2048, 518400, 5256000, 305], [...]], []]
             operator_data: hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
         });
-
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         resolveAddress.setId(address(this), uint64(20000));
@@ -439,5 +450,102 @@ contract ClientTest is Test {
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
         uint256 size = clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
         assertEq(size, 2048);
+    }
+
+    function testGetClientSpActiveDataDeleteAllocationInTerminatedSector() public {
+        actorIdMock.setGetClaimsResult(
+            hex"8282008182001081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+        );
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        uint64[] memory clientAllocationIdsBefore = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsBefore.length, 2);
+        clientContractMock.addTerminatedClaims(0);
+        clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
+        uint64[] memory clientAllocationIdsAfter = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsAfter.length, 1);
+    }
+
+    function testGetClientSpActiveDataDeleteExpiredAllocation() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        uint64[] memory clientAllocationIdsBefore = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsBefore.length, 1);
+        vm.roll(5256407); // after allocation expiry
+        clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
+        uint64[] memory clientAllocationIdsAfter = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsAfter.length, 0);
+    }
+
+    function testDeleteAllocationIdByValueRevertAllocationNotFound() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        vm.expectRevert(abi.encodeWithSelector(Client.AllocationNotFound.selector, 20000, clientAddress, 3));
+        clientContractMock.deleteAllocationIdByValue(SP2, clientAddress, 3);
+    }
+
+    function testDeleteAllocationIdByValue() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 3);
+        clientContractMock.deleteAllocationIdByValue(SP2, clientAddress, 2);
+        uint64[] memory clientAllocationIdsAfter = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsAfter.length, 2);
+        assertEq(clientAllocationIdsAfter[0], 1);
+        assertEq(clientAllocationIdsAfter[1], 3);
+    }
+
+    function testGetSPClients() public {
+        address secondClientAddress = vm.addr(5);
+        clientContractMock.setSpClients(SP2, clientAddress, 4096);
+        clientContractMock.setSpClients(SP2, secondClientAddress, 2048);
+        address[] memory spClients = clientContractMock.getSPClients(SP2);
+        assertEq(spClients.length, 2);
+        assertEq(spClients[0], clientAddress);
+        assertEq(spClients[1], secondClientAddress);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidTopLevelArray() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidTopLevelArray).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidTopLevelArray.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidFirstElementLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidFirstElementLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidFirstElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidFirstElementInnerLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidFirstElementInnerLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidFirstElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidSecondElementLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidSecondElementLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidSecondElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidSecondElementInnerLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidSecondElementInnerLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidSecondElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
     }
 }

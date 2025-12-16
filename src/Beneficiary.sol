@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {MinerTypes} from "filecoin-solidity/v0.8/types/MinerTypes.sol";
-import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {MinerAPI} from "filecoin-solidity/v0.8/MinerAPI.sol";
 import {BigInts} from "filecoin-solidity/v0.8/utils/BigInts.sol";
@@ -12,7 +11,6 @@ import {SLARegistry} from "./SLARegistry.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
 import {SendAPI} from "filecoin-solidity/v0.8/SendAPI.sol";
 import {MinerUtils} from "./libs/MinerUtils.sol";
-import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {Client} from "./Client.sol";
 
 /**
@@ -55,11 +53,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @notice The address to set as the burn address.
      */
     address public burnAddress;
-
-    /**
-     * @notice Mapping of claims that have been terminated early.
-     */
-    mapping(uint64 claim => bool isTerminated) public terminatedClaims;
 
     /**
      * @notice Emits a BurnAddressUpdated event.
@@ -182,7 +175,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         uint256 totalSize = 0;
         uint256[] memory sizePerClient = new uint256[](spClients.length);
         uint256[] memory scorePerClient = new uint256[](spClients.length);
-        int64 currentEpoch = int64(uint64(block.number));
         for (uint256 i = 0; i < spClients.length; i++) {
             SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(spClients[i], provider));
             scorePerClient[i] = slaRegistry.score(spClients[i], provider);
