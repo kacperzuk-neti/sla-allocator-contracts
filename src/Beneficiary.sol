@@ -31,10 +31,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
 
     /**
-     * @notice The role to set terminated claims.
-     */
-    bytes32 public constant TERMINATION_ORACLE = keccak256("TERMINATION_ORACLE");
-    /**
      * @notice The ID of the storage provider.
      */
     CommonTypes.FilActorId public provider;
@@ -249,17 +245,6 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         int256 exitCode = MinerAPI.changeBeneficiary(minerID, params);
         if (exitCode != 0) {
             revert ExitCodeError(exitCode);
-        }
-    }
-
-    /**
-     * @notice Marks the given claims as terminated early.
-     * @dev Only callable by TERMINATION_ORACLE role.
-     * @param claims An array of claim IDs to mark as terminated.
-     */
-    function claimsTerminatedEarly(uint64[] calldata claims) external onlyRole(TERMINATION_ORACLE) {
-        for (uint256 i = 0; i < claims.length; i++) {
-            terminatedClaims[claims[i]] = true;
         }
     }
 
