@@ -37,38 +37,7 @@
   },
   {
     "type": "error",
-    "name": "InvalidNewBeneficiary",
-    "inputs": [
-      {
-        "name": "beneficiary",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "expectedBeneficiary",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "NewExpirationBelowActive",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NewQuotaBelowActive",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "NoBeneficiarySet",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NoNewBeneficiaryProposed",
     "inputs": []
   },
   {
