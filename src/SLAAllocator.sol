@@ -237,6 +237,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __EIP712_init("SLAAllocator", "1");
+        _initRateLimit();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
@@ -329,7 +330,8 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
             revert PaymentTxnNotVerified();
         }
 
-        if (amount != txn.txn.amount) {
+        uint256 txnAmount = txn.txn.amount;
+        if (amount != txnAmount) {
             revert AmountMismatch();
         }
 
