@@ -53,11 +53,7 @@ abstract contract RateLimited {
      * @notice Internal method to initialize the global rate limit
      */
     function _initRateLimit() internal {
-        _globalRateLimit = RateLimit({
-            isGlobal: true,
-            amount: 0,
-            lastUpdate: block.timestamp
-        });
+        _globalRateLimit = RateLimit({isGlobal: true, amount: 0, lastUpdate: block.timestamp});
     }
 
     /**
