@@ -34,19 +34,9 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error AttestationNotVerified();
 
     /**
-     * @notice Error thrown when client in attestation doesn't match caller
+     * @notice Error thrown when SLA is already registered
      */
-    error ClientMismatch();
-
-    /**
-     * @notice Error thrown when provider in attestation doesn't match expected provider
-     */
-    error ProviderMismatch();
-
-    /**
-     * @notice Error thrown when amount in attestation doesn't match expected amount
-     */
-    error AmountMismatch();
+    error SLAAlreadyRegistered();
 
     struct SLA {
         SLARegistry registry;
@@ -298,6 +288,10 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         ManualAttestationSigned calldata attestation
     ) external {
         bytes32 attestationId = attestation.attestation.attestationId;
+        address client = attestation.attestation.client;
+        CommonTypes.FilActorId provider = attestation.attestation.provider;
+        uint256 amount = attestation.attestation.amount;
+
         if (usedManualAttestations[attestationId]) {
             revert AttestationAlreadyUsed();
         }
@@ -306,22 +300,6 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         bool isVerified = verifyManualAttestationSigned(attestation);
         if (!isVerified) {
             revert AttestationNotVerified();
-        }
-
-        address client = msg.sender;
-        address attestedClient = attestation.attestation.client;
-        if (attestedClient != client) {
-            revert ClientMismatch();
-        }
-
-        CommonTypes.FilActorId attestedProvider = attestation.attestation.provider;
-        if (CommonTypes.FilActorId.unwrap(attestedProvider) != CommonTypes.FilActorId.unwrap(provider)) {
-            revert ProviderMismatch();
-        }
-
-        uint256 attestedAmount = attestation.attestation.amount;
-        if (attestedAmount != amount) {
-            revert AmountMismatch();
         }
 
         SLARegistry registry = SLARegistry(slaContract);
@@ -341,20 +319,18 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         SLARegistry registry,
         uint256 amount
     ) internal {
-        // make sure SLA is registered (it doesnt revert)
         registry.score(client, provider);
-
-        // make sure beneficiary is set correctly
         MinerUtils.getBeneficiaryWithChecks(provider, beneficiaryFactory, true, true, true);
 
-        // update state
+        if (address(slaContracts[client][provider]) != address(0)) {
+            revert SLAAlreadyRegistered();
+        }
+
         slaContracts[client][provider] = registry;
         if (providerClients[provider] == address(0)) {
             providerClients[provider] = client;
             providers.push(provider);
             emit SLARegistered(client, provider);
-        } else if (providerClients[provider] != client) {
-            revert ProviderBoundToDifferentClient();
         }
 
         clientSmartContract.increaseAllowance(client, provider, amount);

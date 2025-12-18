@@ -588,69 +588,6 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
     }
 
-    function testRequestDataCapClientMismatchRevert() public {
-        address client = address(this);
-
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
-        });
-
-        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        SLAAllocator.ManualAttestationSigned memory signedAttestation =
-            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
-
-        vm.prank(unauthorized);
-        vm.expectRevert(SLAAllocator.ClientMismatch.selector);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
-    }
-
-    function testRequestDataCapProviderMismatchRevert() public {
-        address client = address(this);
-
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
-        });
-
-        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        SLAAllocator.ManualAttestationSigned memory signedAttestation =
-            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
-
-        vm.prank(client);
-        vm.expectRevert(SLAAllocator.ProviderMismatch.selector);
-        verifySignaturesHelper.requestDataCap(SP1, address(slaRegistry), 1, signedAttestation);
-    }
-
-    function testRequestDataCapAmountMismatchRevert() public {
-        address client = address(this);
-
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
-        });
-
-        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        SLAAllocator.ManualAttestationSigned memory signedAttestation =
-            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
-
-        vm.prank(client);
-        vm.expectRevert(SLAAllocator.AmountMismatch.selector);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 2, signedAttestation);
-    }
-
     function testRequestDataCapEmitEvent() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
@@ -678,16 +615,14 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
     }
 
-    function testRequestDataCapProviderBoundToDifferentClientRevert() public {
+    function testRequestDataCapSLAAlreadyRegisteredRevert() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
 
-        address client1 = address(this);
-
         SLAAllocator.ManualAttestation memory attestation1 = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(1)), client: client1, provider: SP2, amount: 1, opaqueData: "data"
+            attestationId: bytes32(uint256(1)), client: address(this), provider: SP2, amount: 1, opaqueData: "data"
         });
 
         bytes32 structHash1 = verifySignaturesHelper.hashManualAttestationExt(attestation1);
@@ -699,13 +634,11 @@ contract SLAAllocatorTest is Test {
         SLAAllocator.ManualAttestationSigned memory signedAttestation1 =
             SLAAllocator.ManualAttestationSigned({attestation: attestation1, signature: signature1});
 
-        vm.prank(client1);
+        vm.prank(address(this));
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation1);
 
-        address client2 = vm.addr(123);
-
         SLAAllocator.ManualAttestation memory attestation2 = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(2)), client: client2, provider: SP2, amount: 1, opaqueData: "data"
+            attestationId: bytes32(uint256(2)), client: address(this), provider: SP2, amount: 1, opaqueData: "data"
         });
 
         bytes32 structHash2 = verifySignaturesHelper.hashManualAttestationExt(attestation2);
@@ -717,8 +650,8 @@ contract SLAAllocatorTest is Test {
         SLAAllocator.ManualAttestationSigned memory signedAttestation2 =
             SLAAllocator.ManualAttestationSigned({attestation: attestation2, signature: signature2});
 
-        vm.prank(client2);
-        vm.expectRevert(SLAAllocator.ProviderBoundToDifferentClient.selector);
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation2);
     }
 }

@@ -815,11 +815,6 @@
   },
   {
     "type": "error",
-    "name": "AmountMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "AttestationAlreadyUsed",
     "inputs": []
   },
@@ -836,11 +831,6 @@
   {
     "type": "error",
     "name": "BeneficiaryInstanceNonexistent",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ClientMismatch",
     "inputs": []
   },
   {
@@ -1013,17 +1003,17 @@
   },
   {
     "type": "error",
-    "name": "ProviderMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "QuotaCannotBeNegative",
     "inputs": []
   },
   {
     "type": "error",
     "name": "QuotaNotUnlimited",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SLAAlreadyRegistered",
     "inputs": []
   },
   {
