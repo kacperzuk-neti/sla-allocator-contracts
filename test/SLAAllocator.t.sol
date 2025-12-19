@@ -563,11 +563,11 @@ contract SLAAllocatorTest is Test {
             SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
 
         vm.prank(client);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
 
         vm.prank(client);
         vm.expectRevert(SLAAllocator.AttestationAlreadyUsed.selector);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
     }
 
     function testRequestDataCapAttestationNotVerifiedRevert() public {
@@ -585,7 +585,7 @@ contract SLAAllocatorTest is Test {
 
         vm.prank(client);
         vm.expectRevert(SLAAllocator.AttestationNotVerified.selector);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
     }
 
     function testRequestDataCapEmitEvent() public {
@@ -612,7 +612,7 @@ contract SLAAllocatorTest is Test {
         vm.prank(client);
         vm.expectEmit(true, true, false, true);
         emit SLAAllocator.DataCapGranted(client, SP2, 1);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
     }
 
     function testRequestDataCapSLAAlreadyRegisteredRevert() public {
@@ -635,7 +635,7 @@ contract SLAAllocatorTest is Test {
             SLAAllocator.ManualAttestationSigned({attestation: attestation1, signature: signature1});
 
         vm.prank(address(this));
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation1);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation1);
 
         SLAAllocator.ManualAttestation memory attestation2 = SLAAllocator.ManualAttestation({
             attestationId: bytes32(uint256(2)), client: address(this), provider: SP2, amount: 1, opaqueData: "data"
@@ -652,6 +652,6 @@ contract SLAAllocatorTest is Test {
 
         vm.prank(address(this));
         vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedAttestation2);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation2);
     }
 }

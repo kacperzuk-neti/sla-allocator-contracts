@@ -383,19 +383,9 @@
     "name": "requestDataCap",
     "inputs": [
       {
-        "name": "provider",
-        "type": "uint64",
-        "internalType": "CommonTypes.FilActorId"
-      },
-      {
         "name": "slaContract",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
       },
       {
         "name": "attestation",

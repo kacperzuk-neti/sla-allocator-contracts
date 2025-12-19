@@ -276,17 +276,10 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
     /**
      * @notice Grants DataCap to a client based on a manual attestation
-     * @param provider Provider FilActorId
      * @param slaContract SLA contract address
-     * @param amount Amount of DC to grant
      * @param attestation Signed manual attestation
      */
-    function requestDataCap(
-        CommonTypes.FilActorId provider,
-        address slaContract,
-        uint256 amount,
-        ManualAttestationSigned calldata attestation
-    ) external {
+    function requestDataCap(address slaContract, ManualAttestationSigned calldata attestation) external {
         bytes32 attestationId = attestation.attestation.attestationId;
         address client = attestation.attestation.client;
         CommonTypes.FilActorId provider = attestation.attestation.provider;
