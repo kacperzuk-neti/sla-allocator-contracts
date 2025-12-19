@@ -16,7 +16,6 @@ import {UtilsHandlers} from "filecoin-solidity/v0.8/utils/UtilsHandlers.sol";
 import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 import {AllocationResponseCbor} from "./libs/AllocationResponseCbor.sol";
-import {FilecoinConverter} from "./libs/FilecoinConverter.sol";
 
 /**
  * @title Client
@@ -556,7 +555,9 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 continue;
             }
             if (
-                CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_max) < currentEpoch
+                CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_start)
+                            + CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_max)
+                        < currentEpoch
                     || terminatedClaims[
                         CommonTypes.FilActorId.unwrap(getClaimsResult.claims[i - failCodesIterator].sector)
                     ]
