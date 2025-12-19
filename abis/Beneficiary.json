@@ -439,6 +439,25 @@
   },
   {
     "type": "event",
+    "name": "RewardsCalculated",
+    "inputs": [
+      {
+        "name": "amountToWithdraw",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amountToRedirect",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RoleAdminChanged",
     "inputs": [
       {
@@ -544,12 +563,6 @@
       },
       {
         "name": "amountToSP",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amountToRedirected",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

@@ -156,34 +156,50 @@ contract BeneficiaryTest is Test {
         beneficiary.setBurnAddress(address(0x123));
     }
 
-    function testWithdrawForGreenBand() public {
-        vm.deal(address(beneficiary), 10000);
+    function testReceiveAndWithdrawForGreenBand() public {
+        address(beneficiary).call{value: 10000}("");
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
-        emit Beneficiary.Withdrawn(SP1Address, 10000, 0);
+        emit Beneficiary.Withdrawn(SP1Address, 10000);
         beneficiary.withdraw(SP1Address);
     }
 
-    function testWithdrawForAmberBand() public {
+    function testReceiveAndWithdrawForAmberBand() public {
         CommonTypes.FilActorId providerWithAmberBandScore = CommonTypes.FilActorId.wrap(0x123);
         beneficiary = setupBeneficiary(address(this), manager, providerWithAmberBandScore, slaAllocator, burnAddress);
-        vm.deal(address(beneficiary), 10000);
+        address(beneficiary).call{value: 10000}("");
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(SP1Address, 5000, 5000);
+        emit Beneficiary.Withdrawn(SP1Address, 5000);
         beneficiary.withdraw(SP1Address);
     }
 
-    function testWithdrawForRedBand() public {
+    function testReceiveAndWithdrawForRedBand() public {
         CommonTypes.FilActorId providerWithRedBandScore = CommonTypes.FilActorId.wrap(0x456);
         beneficiary = setupBeneficiary(address(this), manager, providerWithRedBandScore, slaAllocator, burnAddress);
-        vm.deal(address(beneficiary), 10000);
+        address(beneficiary).call{value: 10000}("");
         vm.startPrank(manager);
         vm.expectEmit(true, true, true, true);
 
-        emit Beneficiary.Withdrawn(SP1Address, 1000, 9000);
+        emit Beneficiary.Withdrawn(SP1Address, 1000);
         beneficiary.withdraw(SP1Address);
+    }
+
+    function testWithdrawFunctionSetAmountToWithdrawToZero() public {
+        address(beneficiary).call{value: 10000}("");
+        vm.startPrank(manager);
+        beneficiary.withdraw(SP1Address);
+        vm.startPrank(manager);
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.Withdrawn(SP1Address, 0);
+        beneficiary.withdraw(SP1Address);
+    }
+
+    function testReceiveEmitEvents() public {
+        vm.expectEmit(true, true, true, true);
+        emit Beneficiary.RewardsCalculated(10000, 0);
+        address(beneficiary).call{value: 10000}("");
     }
 
     function testWithddrawRevertsWhenNotWithdrawer() public {

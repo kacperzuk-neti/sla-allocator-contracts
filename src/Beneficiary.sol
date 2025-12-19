@@ -50,6 +50,10 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      */
     address public burnAddress;
 
+    uint256 internal amountToWithdraw;
+
+    uint256 internal amountToRedirect;
+
     /**
      * @notice Emits a BurnAddressUpdated event.
      * @param burnAddress The address to set as the burn address.
@@ -67,9 +71,15 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @notice Emits a Withdrawn event.
      * @param recipient The FilAddress to withdraw the balance to.
      * @param amountToSP The amount to send to the storage provider.
-     * @param amountToRedirected The amount to send to the redirected address.
      */
-    event Withdrawn(CommonTypes.FilAddress indexed recipient, uint256 amountToSP, uint256 amountToRedirected);
+    event Withdrawn(CommonTypes.FilAddress indexed recipient, uint256 amountToSP);
+
+    /**
+     * @notice Emitted when rewards are calculated from received funds.
+     * @param amountToWithdraw The amount to be withdrawn to the recipient.
+     * @param amountToRedirect The amount to be redirected.
+     */
+    event RewardsCalculated(uint256 amountToWithdraw, uint256 amountToRedirect);
     // solhint-enable gas-indexed-events
     /**
      * @notice Emitted when changeBeneficiary proposal is approved
@@ -166,28 +176,9 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
      * @param recipient The FilAddress to withdraw the balance to.
      */
     function withdraw(CommonTypes.FilAddress calldata recipient) external onlyRole(WITHDRAWER_ROLE) {
-        uint256 amount = address(this).balance;
-        address[] memory spClients = clientContract.getSPClients(provider);
-        uint256 totalSize = 0;
-        uint256[] memory sizePerClient = new uint256[](spClients.length);
-        uint256[] memory scorePerClient = new uint256[](spClients.length);
-        for (uint256 i = 0; i < spClients.length; i++) {
-            SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(spClients[i], provider));
-            scorePerClient[i] = slaRegistry.score(spClients[i], provider);
-            sizePerClient[i] = clientContract.getClientSpActiveDataSize(spClients[i], provider);
-            totalSize += sizePerClient[i];
-        }
-        uint256 finalScore = 0;
-        if (totalSize == 0) {
-            finalScore = 100;
-        } else {
-            for (uint256 i = 0; i < spClients.length; i++) {
-                uint256 weight = (sizePerClient[i] * 1e18) / totalSize;
-                finalScore += (weight * scorePerClient[i]) / 1e18;
-            }
-        }
-        (uint256 amountToSP, uint256 amountToBeRedirected) = _slashByScore(amount, finalScore);
-        emit Withdrawn(recipient, amountToSP, amountToBeRedirected);
+        uint256 amount = amountToWithdraw;
+        amountToWithdraw = 0;
+        emit Withdrawn(recipient, amount);
         // solhint-disable-next-line check-send-result
         int256 exitCode = SendAPI.send(recipient, amount);
         if (exitCode != 0) {
@@ -274,6 +265,38 @@ contract Beneficiary is Initializable, AccessControlUpgradeable {
         }
     }
 
-    // solhint-disable-next-line use-natspec
-    receive() external payable {}
+    // solhint-disable no-complex-fallback
+    /**
+     * @notice Receive founds and splits them based on clients' weighted SLA scores.
+     * @dev The final score is calculated as a size-weighted average of SLA scores.
+     *      If there is no active data size, a default score of 100 is used.
+     *      The received amount is then slashed according to the final score.
+     */
+    receive() external payable {
+        uint256 amount = msg.value;
+        address[] memory spClients = clientContract.getSPClients(provider);
+        uint256 totalSize = 0;
+        uint256[] memory sizePerClient = new uint256[](spClients.length);
+        uint256[] memory scorePerClient = new uint256[](spClients.length);
+        for (uint256 i = 0; i < spClients.length; i++) {
+            SLARegistry slaRegistry = SLARegistry(slaAllocator.slaContracts(spClients[i], provider));
+            scorePerClient[i] = slaRegistry.score(spClients[i], provider);
+            sizePerClient[i] = clientContract.getClientSpActiveDataSize(spClients[i], provider);
+            totalSize += sizePerClient[i];
+        }
+        uint256 finalScore = 0;
+        if (totalSize == 0) {
+            finalScore = 100;
+        } else {
+            for (uint256 i = 0; i < spClients.length; i++) {
+                uint256 weight = (sizePerClient[i] * 1e18) / totalSize;
+                finalScore += (weight * scorePerClient[i]) / 1e18;
+            }
+        }
+        (uint256 amountToSP, uint256 amountToBeRedirected) = _slashByScore(amount, finalScore);
+        amountToWithdraw += amountToSP;
+        amountToRedirect += amountToBeRedirected;
+        emit RewardsCalculated(amountToSP, amountToBeRedirected);
+    }
+    // solhint-enable no-complex-fallback
 }
