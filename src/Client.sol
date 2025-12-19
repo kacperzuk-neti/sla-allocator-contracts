@@ -61,7 +61,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
      * @notice Mapping of client deal IDs per storage provider (FilActorId)
      */
-    mapping(CommonTypes.FilActorId provider => mapping(address client => uint64[] allocationIds)) public
+    mapping(CommonTypes.FilActorId provider => mapping(address client => CommonTypes.FilActorId[] allocationIds)) public
         clientAllocationIdsPerProvider;
 
     /**
@@ -272,13 +272,12 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             revert TransferFailed(exitCode);
         }
         if (allocations.length != 0) {
-            uint64[] memory allocationIds = transferReturn.decodeAllocationResponse();
+            CommonTypes.FilActorId[] memory allocationIds = transferReturn.decodeAllocationResponse();
             for (uint256 i = 0; i < allocationIds.length; i++) {
-                uint64 allocId = allocationIds[i];
+                CommonTypes.FilActorId allocId = allocationIds[i];
                 CommonTypes.FilActorId provider = allocations[i].provider;
                 clientAllocationIdsPerProvider[provider][msg.sender].push(allocId);
             }
-            // _registerAllocationIds(allocations, transferReturn);
         }
     }
 
@@ -510,17 +509,17 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /// @param client The Ethereum address of the client
     /// @param allocationId The allocation ID to delete
     function _deleteAllocationIdByValue(CommonTypes.FilActorId provider, address client, uint64 allocationId) internal {
-        uint64[] storage ids = clientAllocationIdsPerProvider[provider][client];
+        CommonTypes.FilActorId[] storage ids = clientAllocationIdsPerProvider[provider][client];
 
         uint256 maxIdx = ids.length - 1;
         for (uint256 i = 0; i < maxIdx; i++) {
-            if (ids[i] == allocationId) {
+            if (CommonTypes.FilActorId.unwrap(ids[i]) == allocationId) {
                 ids[i] = ids[maxIdx];
                 ids.pop();
                 return;
             }
         }
-        if (ids[maxIdx] == allocationId) {
+        if (CommonTypes.FilActorId.unwrap(ids[maxIdx]) == allocationId) {
             ids.pop();
         } else {
             revert AllocationNotFound(provider, client, allocationId);
@@ -536,10 +535,9 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @return totalSizePerSp The total active data size for the client with the specified provider
      */
     function getClientSpActiveDataSize(address client, CommonTypes.FilActorId provider) external returns (uint256) {
-        uint64[] memory clientAllocationIds = clientAllocationIdsPerProvider[provider][client];
-        VerifRegTypes.GetClaimsParams memory getClaimsParams = VerifRegTypes.GetClaimsParams({
-            provider: provider, claim_ids: FilecoinConverter.allocationIdsToClaimIds(clientAllocationIds)
-        });
+        CommonTypes.FilActorId[] memory clientAllocationIds = clientAllocationIdsPerProvider[provider][client];
+        VerifRegTypes.GetClaimsParams memory getClaimsParams =
+            VerifRegTypes.GetClaimsParams({provider: provider, claim_ids: clientAllocationIds});
         (int256 getClaimsExitCode, VerifRegTypes.GetClaimsReturn memory getClaimsResult) =
             VerifRegAPI.getClaims(getClaimsParams);
         if (getClaimsExitCode != 0) {
@@ -550,7 +548,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         int64 currentEpoch = int64(uint64(block.number));
         for (uint256 i = 0; i < clientAllocationIds.length; i++) {
             if (
-                getClaimsResult.batch_info.success_count != clientAllocationIds.length
+                getClaimsResult.batch_info.fail_codes.length > 0
                     && getClaimsResult.batch_info.fail_codes.length > failCodesIterator
                     && i == getClaimsResult.batch_info.fail_codes[failCodesIterator].idx
             ) {
@@ -563,7 +561,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                         CommonTypes.FilActorId.unwrap(getClaimsResult.claims[i - failCodesIterator].sector)
                     ]
             ) {
-                _deleteAllocationIdByValue(provider, client, clientAllocationIds[i]);
+                _deleteAllocationIdByValue(provider, client, CommonTypes.FilActorId.unwrap(clientAllocationIds[i]));
                 continue;
             }
             totalSizePerSp += getClaimsResult.claims[i - failCodesIterator].size;

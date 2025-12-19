@@ -458,21 +458,25 @@ contract ClientTest is Test {
         );
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
-        uint64[] memory clientAllocationIdsBefore = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        CommonTypes.FilActorId[] memory clientAllocationIdsBefore =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
         assertEq(clientAllocationIdsBefore.length, 2);
         clientContractMock.addTerminatedClaims(0);
         clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
-        uint64[] memory clientAllocationIdsAfter = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
         assertEq(clientAllocationIdsAfter.length, 1);
     }
 
     function testGetClientSpActiveDataDeleteExpiredAllocation() public {
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
-        uint64[] memory clientAllocationIdsBefore = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        CommonTypes.FilActorId[] memory clientAllocationIdsBefore =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
         assertEq(clientAllocationIdsBefore.length, 1);
         vm.roll(5256407); // after allocation expiry
         clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
-        uint64[] memory clientAllocationIdsAfter = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
         assertEq(clientAllocationIdsAfter.length, 0);
     }
 
@@ -488,10 +492,11 @@ contract ClientTest is Test {
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 3);
         clientContractMock.deleteAllocationIdByValue(SP2, clientAddress, 2);
-        uint64[] memory clientAllocationIdsAfter = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
         assertEq(clientAllocationIdsAfter.length, 2);
-        assertEq(clientAllocationIdsAfter[0], 1);
-        assertEq(clientAllocationIdsAfter[1], 3);
+        assertEq(CommonTypes.FilActorId.unwrap(clientAllocationIdsAfter[0]), 1);
+        assertEq(CommonTypes.FilActorId.unwrap(clientAllocationIdsAfter[1]), 3);
     }
 
     function testGetSPClients() public {

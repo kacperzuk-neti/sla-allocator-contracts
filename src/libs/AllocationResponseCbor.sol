@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {CBORDecoder} from "filecoin-solidity/v0.8/utils/CborDecode.sol";
 import {DataCapTypes} from "filecoin-solidity/v0.8/types/DataCapTypes.sol";
+import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 
 /**
  * @title AllocationResponseCbor
@@ -31,7 +32,7 @@ library AllocationResponseCbor {
      */
     function decodeAllocationResponse(DataCapTypes.TransferReturn memory result)
         internal
-        returns (uint64[] memory allocationIds)
+        returns (CommonTypes.FilActorId[] memory allocationIds)
     {
         bytes memory cborData = result.recipient_data;
         uint256 topArrayLength;
@@ -82,11 +83,11 @@ library AllocationResponseCbor {
         // new_allocations: [allocationID_1, ..., allocationID_N]
         uint256 allocationIdsLength;
         (allocationIdsLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
-        allocationIds = new uint64[](allocationIdsLength);
+        allocationIds = new CommonTypes.FilActorId[](allocationIdsLength);
         for (uint256 i = 0; i < allocationIdsLength; i++) {
             uint64 allocationId;
             (allocationId, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
-            allocationIds[i] = allocationId;
+            allocationIds[i] = CommonTypes.FilActorId.wrap(allocationId);
         }
     }
 }

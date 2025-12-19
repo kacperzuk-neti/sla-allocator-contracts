@@ -156,7 +156,7 @@
       {
         "name": "allocationIds",
         "type": "uint64",
-        "internalType": "uint64"
+        "internalType": "CommonTypes.FilActorId"
       }
     ],
     "stateMutability": "view"
