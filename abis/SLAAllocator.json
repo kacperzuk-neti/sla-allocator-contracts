@@ -881,11 +881,6 @@
   },
   {
     "type": "error",
-    "name": "AmountMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "BeneficiaryFactoryAlreadySet",
     "inputs": []
   },
@@ -1107,6 +1102,11 @@
   {
     "type": "error",
     "name": "QuotaNotUnlimited",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SLAAlreadyRegistered",
     "inputs": []
   },
   {

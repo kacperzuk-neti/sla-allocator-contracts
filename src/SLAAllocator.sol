@@ -41,14 +41,14 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error TxPayerSameAsSPOwner();
 
     /**
-     * @notice Error thrown when amount in attestation doesn't match expected amount
-     */
-    error AmountMismatch();
-
-    /**
      * @notice Error thrown when amount exceeds non-passport limit
      */
     error AmountExceedsNonPassportLimit();
+
+    /**
+     * @notice Error thrown when SLA is already registered
+     */
+    error SLAAlreadyRegistered();
 
     struct SLA {
         SLARegistry registry;
@@ -330,11 +330,6 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
             revert PaymentTxnNotVerified();
         }
 
-        uint256 txnAmount = txn.txn.amount;
-        if (amount != txnAmount) {
-            revert AmountMismatch();
-        }
-
         SLARegistry registry = SLARegistry(slaContract);
         _registerSLAAndGrant(client, provider, registry, amount);
     }
@@ -352,20 +347,18 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         SLARegistry registry,
         uint256 amount
     ) internal {
-        // make sure SLA is registered (it doesnt revert)
         registry.score(client, provider);
-
-        // make sure beneficiary is set correctly
         MinerUtils.getBeneficiaryWithChecks(provider, beneficiaryFactory, true, true, true);
 
-        // update state
+        if (address(slaContracts[client][provider]) != address(0)) {
+            revert SLAAlreadyRegistered();
+        }
+
         slaContracts[client][provider] = registry;
         if (providerClients[provider] == address(0)) {
             providerClients[provider] = client;
             providers.push(provider);
             emit SLARegistered(client, provider);
-        } else if (providerClients[provider] != client) {
-            revert ProviderBoundToDifferentClient();
         }
 
         clientSmartContract.increaseAllowance(client, provider, amount);

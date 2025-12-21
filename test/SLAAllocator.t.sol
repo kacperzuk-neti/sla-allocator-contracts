@@ -684,41 +684,12 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
     }
 
-    function testRequestDataCapWithNoPassportAmountMismatchRevert() public {
-        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
-        resolveAddress.setAddress(hex"f101", uint64(123));
-
-        address client = address(this);
-
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
-        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
-        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        SLAAllocator.PaymentTransactionSigned memory signedTxn =
-            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
-
-        vm.prank(client);
-        vm.expectRevert(SLAAllocator.AmountMismatch.selector);
-        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 2, signedTxn);
-    }
-
-    function testRequestDataCapWithNoPassportProviderBoundToDifferentClientRevert() public {
+    function testRequestDataCapWithNoPassportSLAAlreadyRegisteredRevert() public {
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         resolveAddress.setAddress(hex"f101", uint64(123));
 
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
-
-        address client1 = address(this);
 
         SLAAllocator.PaymentTransaction memory txn1 = SLAAllocator.PaymentTransaction({
             id: bytes("1"),
@@ -736,10 +707,8 @@ contract SLAAllocatorTest is Test {
         SLAAllocator.PaymentTransactionSigned memory signedTxn1 =
             SLAAllocator.PaymentTransactionSigned({txn: txn1, signature: signature1});
 
-        vm.prank(client1);
+        vm.prank(address(this));
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn1);
-
-        address client2 = vm.addr(123);
 
         SLAAllocator.PaymentTransaction memory txn2 = SLAAllocator.PaymentTransaction({
             id: bytes("2"),
@@ -753,12 +722,11 @@ contract SLAAllocatorTest is Test {
 
         (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digest2);
         bytes memory signature2 = abi.encodePacked(r2, s2, v2);
-
         SLAAllocator.PaymentTransactionSigned memory signedTxn2 =
             SLAAllocator.PaymentTransactionSigned({txn: txn2, signature: signature2});
 
-        vm.prank(client2);
-        vm.expectRevert(SLAAllocator.ProviderBoundToDifferentClient.selector);
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn2);
     }
 }
