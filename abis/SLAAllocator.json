@@ -881,11 +881,6 @@
   },
   {
     "type": "error",
-    "name": "AmountMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "BeneficiaryFactoryAlreadySet",
     "inputs": []
   },
