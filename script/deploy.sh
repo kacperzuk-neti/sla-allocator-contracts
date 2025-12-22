@@ -39,16 +39,11 @@ function deployBeneficiaryFactory() {
     exit 1
   fi
 
-  if [ -z "$3" ]; then
-    echo "deployBeneficiaryFactory needs termination oracle address" >&2
-    exit 1
-  fi
-
   beneficiaryImpl=$(_deploy Beneficiary)
   ((nonce += 1))
   impl=$(_deploy BeneficiaryFactory)
   ((nonce += 1))
-  calldata=$(cast calldata 'initialize(address,address,address,address,address)' "$ADMIN" "$beneficiaryImpl" "$1" "$2" "$3")
+  calldata=$(cast calldata 'initialize(address,address,address,address)' "$ADMIN" "$beneficiaryImpl" "$1" "$2")
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 
@@ -65,7 +60,7 @@ function deployClient() {
   fi
   impl=$(_deploy Client)
   ((nonce += 1))
-  calldata=$(cast calldata 'initialize(address,address,address)' "$ADMIN" "$1" "$2")
+  calldata=$(cast calldata 'initialize(address,address,address, address)' "$ADMIN" "$1" "$2" "$TERMINATION_ORACLE")
   _deploy ERC1967Proxy --constructor-args "$impl" "$calldata"
 }
 
@@ -87,7 +82,7 @@ CHAIN_ID=$(cast chain-id --rpc-url "$RPC_URL")
 slaAllocator=$(deploySLAAllocator)
 ((nonce += 2))
 
-beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator" "$BURN_ADDRESS" "$TERMINATION_ORACLE")
+beneficiaryFactory=$(deployBeneficiaryFactory "$slaAllocator" "$BURN_ADDRESS")
 ((nonce += 3))
 
 client=$(deployClient "$slaAllocator" "$beneficiaryFactory")

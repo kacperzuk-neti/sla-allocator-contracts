@@ -36,19 +36,6 @@
   },
   {
     "type": "function",
-    "name": "TERMINATION_ORACLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "WITHDRAWER_ROLE",
     "inputs": [],
     "outputs": [
@@ -123,16 +110,16 @@
   },
   {
     "type": "function",
-    "name": "claimsTerminatedEarly",
-    "inputs": [
+    "name": "clientContract",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "claims",
-        "type": "uint64[]",
-        "internalType": "uint64[]"
+        "name": "",
+        "type": "address",
+        "internalType": "contract Client"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -225,9 +212,9 @@
         "internalType": "address"
       },
       {
-        "name": "terminationOracle",
+        "name": "clientContract_",
         "type": "address",
-        "internalType": "address"
+        "internalType": "contract Client"
       }
     ],
     "outputs": [],
@@ -334,25 +321,6 @@
     "outputs": [
       {
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "terminatedClaims",
-    "inputs": [
-      {
-        "name": "claim",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "isTerminated",
         "type": "bool",
         "internalType": "bool"
       }
@@ -471,6 +439,25 @@
   },
   {
     "type": "event",
+    "name": "RewardsCalculated",
+    "inputs": [
+      {
+        "name": "amountToWithdraw",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amountToRedirect",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RoleAdminChanged",
     "inputs": [
       {
@@ -576,12 +563,6 @@
       },
       {
         "name": "amountToSP",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amountToRedirected",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

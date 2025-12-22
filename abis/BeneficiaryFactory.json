@@ -87,6 +87,11 @@
         "name": "provider",
         "type": "uint64",
         "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "clientContract",
+        "type": "address",
+        "internalType": "contract Client"
       }
     ],
     "outputs": [],
@@ -174,11 +179,6 @@
       },
       {
         "name": "burnAddress_",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "terminationOracle_",
         "type": "address",
         "internalType": "address"
       }
@@ -306,19 +306,6 @@
         "name": "",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "terminationOracle",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"

@@ -8,6 +8,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {Beneficiary} from "./Beneficiary.sol";
 import {SLAAllocator} from "./SLAAllocator.sol";
+import {Client} from "./Client.sol";
 
 /**
  * @title BeneficiaryFactory
@@ -47,11 +48,6 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
     address public burnAddress;
 
     /**
-     * @notice Address of the Termination Oracle
-     */
-    address public terminationOracle;
-
-    /**
      * @notice Emitted when a new proxy is successfully created
      * @param proxy The address of the newly deployed proxy
      * @param provider The provider for which the proxy was created
@@ -73,15 +69,11 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param implementation The address of the initial Beneficiary implementation for the beacon
      * @param slaAllocator_ The address of the SLAAllocator
      * @param burnAddress_ The address of the burn address
-     * @param terminationOracle_ The address of the termination oracle
      */
-    function initialize(
-        address admin,
-        address implementation,
-        SLAAllocator slaAllocator_,
-        address burnAddress_,
-        address terminationOracle_
-    ) external initializer {
+    function initialize(address admin, address implementation, SLAAllocator slaAllocator_, address burnAddress_)
+        external
+        initializer
+    {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -89,7 +81,6 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
         beacon = address(new UpgradeableBeacon(implementation, admin));
         slaAllocator = slaAllocator_;
         burnAddress = burnAddress_;
-        terminationOracle = terminationOracle_;
     }
 
     /**
@@ -99,8 +90,11 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
      * @param admin The address of the admin responsible for the contract.
      * @param withdrawer The address of the withdrawer responsible for the contract.
      * @param provider The ID of the provider responsible for the contract.
+     * @param clientContract The address of the Client contract.
      */
-    function create(address admin, address withdrawer, CommonTypes.FilActorId provider) external {
+    function create(address admin, address withdrawer, CommonTypes.FilActorId provider, Client clientContract)
+        external
+    {
         if (instances[provider] != address(0)) {
             revert InstanceAlreadyExists();
         }
@@ -112,7 +106,7 @@ contract BeneficiaryFactory is UUPSUpgradeable, AccessControlUpgradeable {
             abi.encode(
                 beacon,
                 abi.encodeCall(
-                    Beneficiary.initialize, (admin, withdrawer, provider, slaAllocator, burnAddress, terminationOracle)
+                    Beneficiary.initialize, (admin, withdrawer, provider, slaAllocator, burnAddress, clientContract)
                 )
             )
         );

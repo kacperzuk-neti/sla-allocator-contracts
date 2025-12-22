@@ -15,6 +15,7 @@ import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {UtilsHandlers} from "filecoin-solidity/v0.8/utils/UtilsHandlers.sol";
 import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
+import {AllocationResponseCbor} from "./libs/AllocationResponseCbor.sol";
 
 /**
  * @title Client
@@ -22,6 +23,8 @@ import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
  */
 contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
+
+    using AllocationResponseCbor for DataCapTypes.TransferReturn;
 
     /**
      * @notice Allocator role which allows for increasing and decreasing allowances
@@ -41,6 +44,10 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
+     * @notice The role to set terminated claims.
+     */
+    bytes32 public constant TERMINATION_ORACLE = keccak256("TERMINATION_ORACLE");
+    /**
      * @notice Mapping of allowances for clients and providers using FilActorId
      */
     mapping(address client => mapping(CommonTypes.FilActorId provider => uint256 amount)) public allowances;
@@ -48,7 +55,18 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
      * @notice Mapping of storage providers to their clients and their data usage
      */
-    mapping(CommonTypes.FilActorId provider => EnumerableMap.AddressToUintMap client) private spClients;
+    mapping(CommonTypes.FilActorId provider => EnumerableMap.AddressToUintMap client) internal _spClients;
+
+    /**
+     * @notice Mapping of client deal IDs per storage provider (FilActorId)
+     */
+    mapping(CommonTypes.FilActorId provider => mapping(address client => CommonTypes.FilActorId[] allocationIds)) public
+        clientAllocationIdsPerProvider;
+
+    /**
+     * @notice Mapping of claims that have been terminated early.
+     */
+    mapping(uint64 claim => bool isTerminated) public terminatedClaims;
 
     /**
      * @notice  Precision factor for DataCap tokens (1e18)
@@ -74,7 +92,6 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     event DatacapSpent(address indexed client, uint256 amount);
     // solhint-enable gas-indexed-events
-
     /**
      * @notice Error emitted when the amount is zero
      */
@@ -140,6 +157,11 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     error InvalidBeneficiary(address beneficiary, address expectedBeneficiary);
 
+    /**
+     * @notice Thrown if beneficiary contract address doesn't match the one registered in BeneficiaryFactory
+     */
+    error AllocationNotFound(CommonTypes.FilActorId provider, address client, uint64 allocationId);
+
     struct ProviderAllocation {
         CommonTypes.FilActorId provider;
         uint64 size;
@@ -167,13 +189,20 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @param admin Contract owner
      * @param allocator Address of the allocator contract that can increase and decrease allowances
      * @param beneficiaryFactory_ Instance of BeneficiaryFactory
+     * @param terminationOracle Address of the Termination Oracle
      */
-    function initialize(address admin, address allocator, BeneficiaryFactory beneficiaryFactory_) public initializer {
+    function initialize(
+        address admin,
+        address allocator,
+        BeneficiaryFactory beneficiaryFactory_,
+        address terminationOracle
+    ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
         _grantRole(ALLOCATOR_ROLE, allocator);
+        _grantRole(TERMINATION_ORACLE, terminationOracle);
         beneficiaryFactory = beneficiaryFactory_;
     }
 
@@ -226,7 +255,6 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @dev Reverts with InvalidAmount when parsing amount from BigInt to uint256 failed
      */
     function transfer(DataCapTypes.TransferParams calldata params) external {
-        int256 exitCode;
         (uint256 tokenAmount, bool failed) = BigInts.toUint256(params.amount);
         if (failed) revert InvalidAmount();
         uint256 datacapAmount = tokenAmount / TOKEN_PRECISION;
@@ -238,9 +266,17 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         _verifyAndRegisterClaimExtensions(claimExtensions);
         emit DatacapSpent(msg.sender, datacapAmount);
         /// @custom:oz-upgrades-unsafe-allow-reachable delegatecall
-        (exitCode,) = DataCapAPI.transfer(params);
+        (int256 exitCode, DataCapTypes.TransferReturn memory transferReturn) = DataCapAPI.transfer(params);
         if (exitCode != 0) {
             revert TransferFailed(exitCode);
+        }
+        if (allocations.length != 0) {
+            CommonTypes.FilActorId[] memory allocationIds = transferReturn.decodeAllocationResponse();
+            for (uint256 i = 0; i < allocationIds.length; i++) {
+                CommonTypes.FilActorId allocId = allocationIds[i];
+                CommonTypes.FilActorId provider = allocations[i].provider;
+                clientAllocationIdsPerProvider[provider][msg.sender].push(allocId);
+            }
         }
     }
 
@@ -257,8 +293,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][alloc.provider] -= size;
-            (, uint256 prevSize) = spClients[alloc.provider].tryGet(msg.sender);
-            spClients[alloc.provider].set(msg.sender, prevSize + size);
+            (, uint256 prevSize) = _spClients[alloc.provider].tryGet(msg.sender);
+            _spClients[alloc.provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -323,8 +359,8 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 revert InsufficientAllowance();
             }
             allowances[msg.sender][provider] -= size;
-            (, uint256 prevSize) = spClients[provider].tryGet(msg.sender);
-            spClients[provider].set(msg.sender, prevSize + size);
+            (, uint256 prevSize) = _spClients[provider].tryGet(msg.sender);
+            _spClients[provider].set(msg.sender, prevSize + size);
         }
     }
 
@@ -449,11 +485,99 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         view
         returns (ClientDataUsage[] memory clientsDataUsage)
     {
-        uint256 clientCount = spClients[provider].length();
+        uint256 clientCount = _spClients[provider].length();
         clientsDataUsage = new ClientDataUsage[](clientCount);
         for (uint256 i = 0; i < clientCount; ++i) {
-            (address client, uint256 usage) = spClients[provider].at(i);
+            (address client, uint256 usage) = _spClients[provider].at(i);
             clientsDataUsage[i] = ClientDataUsage({client: client, usage: usage});
+        }
+    }
+
+    /**
+     * @notice Returns the data usage of all clients for a given storage provider
+     * @param provider The FilActorId of the storage provider
+     * @return clients An array of provider clients
+     */
+    function getSPClients(CommonTypes.FilActorId provider) external view returns (address[] memory clients) {
+        clients = _spClients[provider].keys();
+    }
+
+    /// @notice Deletes an allocation ID from the client's allocation list for a given provider
+    /// @dev Removes the allocation ID by swapping it with the last element and popping from the array. Reverts with AllocationNotFound if the allocation ID is not found
+    /// @param provider The Filecoin actor ID of the provider
+    /// @param client The Ethereum address of the client
+    /// @param allocationId The allocation ID to delete
+    function _deleteAllocationIdByValue(CommonTypes.FilActorId provider, address client, uint64 allocationId) internal {
+        CommonTypes.FilActorId[] storage ids = clientAllocationIdsPerProvider[provider][client];
+
+        uint256 maxIdx = ids.length - 1;
+        for (uint256 i = 0; i < maxIdx; i++) {
+            if (CommonTypes.FilActorId.unwrap(ids[i]) == allocationId) {
+                ids[i] = ids[maxIdx];
+                ids.pop();
+                return;
+            }
+        }
+        if (CommonTypes.FilActorId.unwrap(ids[maxIdx]) == allocationId) {
+            ids.pop();
+        } else {
+            revert AllocationNotFound(provider, client, allocationId);
+        }
+    }
+
+    /**
+     * @notice Calculates the total active data size for a client with a specific provider
+     * @dev Iterates through the client's allocation IDs, retrieves their claims, and sums up the sizes of active claims
+     *      Removes allocation IDs associated with expired or terminated claims
+     * @param client The Ethereum address of the client
+     * @param provider The Filecoin actor ID of the provider
+     * @return totalSizePerSp The total active data size for the client with the specified provider
+     */
+    function getClientSpActiveDataSize(address client, CommonTypes.FilActorId provider) external returns (uint256) {
+        CommonTypes.FilActorId[] memory clientAllocationIds = clientAllocationIdsPerProvider[provider][client];
+        VerifRegTypes.GetClaimsParams memory getClaimsParams =
+            VerifRegTypes.GetClaimsParams({provider: provider, claim_ids: clientAllocationIds});
+        (int256 getClaimsExitCode, VerifRegTypes.GetClaimsReturn memory getClaimsResult) =
+            VerifRegAPI.getClaims(getClaimsParams);
+        if (getClaimsExitCode != 0) {
+            revert GetClaimsCallFailed();
+        }
+        uint256 totalSizePerSp = 0;
+        uint256 failCodesIterator = 0;
+        int64 currentEpoch = int64(uint64(block.number));
+        for (uint256 i = 0; i < clientAllocationIds.length; i++) {
+            if (
+                getClaimsResult.batch_info.fail_codes.length > 0
+                    && getClaimsResult.batch_info.fail_codes.length > failCodesIterator
+                    && i == getClaimsResult.batch_info.fail_codes[failCodesIterator].idx
+            ) {
+                failCodesIterator += 1;
+                continue;
+            }
+            if (
+                CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_start)
+                            + CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_max)
+                        < currentEpoch
+                    || terminatedClaims[
+                        CommonTypes.FilActorId.unwrap(getClaimsResult.claims[i - failCodesIterator].sector)
+                    ]
+            ) {
+                _deleteAllocationIdByValue(provider, client, CommonTypes.FilActorId.unwrap(clientAllocationIds[i]));
+                continue;
+            }
+            totalSizePerSp += getClaimsResult.claims[i - failCodesIterator].size;
+        }
+        return totalSizePerSp;
+    }
+
+    /**
+     * @notice Marks the given claims as terminated early.
+     * @dev Only callable by TERMINATION_ORACLE role.
+     * @param claims An array of claim IDs to mark as terminated.
+     */
+    function claimsTerminatedEarly(uint64[] calldata claims) external onlyRole(TERMINATION_ORACLE) {
+        for (uint256 i = 0; i < claims.length; i++) {
+            terminatedClaims[claims[i]] = true;
         }
     }
 

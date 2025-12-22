@@ -17,13 +17,22 @@ import {FilAddressIdConverter} from "filecoin-solidity/v0.8/utils/FilAddressIdCo
 import {ResolveAddressPrecompileFailingMock} from "../test/contracts/ResolveAddressPrecompileFailingMock.sol";
 import {BuiltInActorForTransferFunctionMock} from "./contracts/BuiltInActorForTransferFunctionMock.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {MockClientContract} from "./contracts/MockClientContract.sol";
+import {FailingMockInvalidTopLevelArray} from "./contracts/FailingMockInvalidTopLevelArray.sol";
+import {FailingMockInvalidFirstElementLength} from "./contracts/FailingMockInvalidFirstElementLength.sol";
+import {FailingMockInvalidFirstElementInnerLength} from "./contracts/FailingMockInvalidFirstElementInnerLength.sol";
+import {FailingMockInvalidSecondElementLength} from "./contracts/FailingMockInvalidSecondElementLength.sol";
+import {FailingMockInvalidSecondElementInnerLength} from "./contracts/FailingMockInvalidSecondElementInnerLength.sol";
+import {AllocationResponseCbor} from "../src/libs/AllocationResponseCbor.sol";
 
+// solhint-disable max-states-count
 contract ClientTest is Test {
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
     address public datacapContract = address(0xfF00000000000000000000000000000000000007);
     address public allocator;
     address public clientAddress;
-    bytes public transferTo = abi.encodePacked(vm.addr(6));
+    address public terminationOracle;
+    bytes public transferTo = abi.encodePacked(vm.addr(2));
 
     CommonTypes.FilActorId public providerFilActorId;
     // solhint-disable-next-line var-name-mixedcase
@@ -34,12 +43,20 @@ contract ClientTest is Test {
 
     MockBeneficiaryFactory public mockBeneficiaryFactory;
     ActorIdExitCodeErrorFailingMock public actorIdExitCodeErrorFailingMock;
+    FailingMockInvalidTopLevelArray public failingMockInvalidTopLevelArray;
+    FailingMockInvalidFirstElementLength public failingMockInvalidFirstElementLength;
+    FailingMockInvalidFirstElementInnerLength public failingMockInvalidFirstElementInnerLength;
+    FailingMockInvalidSecondElementLength public failingMockInvalidSecondElementLength;
+    FailingMockInvalidSecondElementInnerLength public failingMockInvalidSecondElementInnerLength;
     BuiltInActorForTransferFunctionMock public builtInActorForTransferFunctionMock;
     ActorIdMock public actorIdMock;
     ResolveAddressPrecompileMock public resolveAddressPrecompileMock;
     ResolveAddressPrecompileFailingMock public resolveAddressPrecompileFailingMock;
+    MockClientContract public clientContractMock;
     ResolveAddressPrecompileMock public resolveAddress =
         ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
+
+    uint64[] public earlyTerminatedClaims = new uint64[](0);
 
     function setUp() public {
         Client impl = new Client();
@@ -48,31 +65,37 @@ contract ClientTest is Test {
         clientAddress = address(0x789);
 
         mockBeneficiaryFactory = new MockBeneficiaryFactory();
-
+        terminationOracle = vm.addr(3);
         // solhint-disable-next-line gas-small-strings
         bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,address)", address(this), allocator, mockBeneficiaryFactory
+            "initialize(address,address,address,address)",
+            address(this),
+            allocator,
+            mockBeneficiaryFactory,
+            terminationOracle
         );
-
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         client = Client(address(proxy));
-
+        clientContractMock = new MockClientContract();
         actorIdMock = new ActorIdMock();
         actorIdExitCodeErrorFailingMock = new ActorIdExitCodeErrorFailingMock();
+        failingMockInvalidTopLevelArray = new FailingMockInvalidTopLevelArray();
+        failingMockInvalidFirstElementLength = new FailingMockInvalidFirstElementLength();
+        failingMockInvalidFirstElementInnerLength = new FailingMockInvalidFirstElementInnerLength();
+        failingMockInvalidSecondElementLength = new FailingMockInvalidSecondElementLength();
+        failingMockInvalidSecondElementInnerLength = new FailingMockInvalidSecondElementInnerLength();
         resolveAddressPrecompileMock = new ResolveAddressPrecompileMock();
         resolveAddressPrecompileFailingMock = new ResolveAddressPrecompileFailingMock();
         builtInActorForTransferFunctionMock = new BuiltInActorForTransferFunctionMock();
-
+        earlyTerminatedClaims.push(1);
         address actorIdProxy = address(new MockProxy(address(5555)));
         vm.etch(CALL_ACTOR_ID, address(actorIdProxy).code);
         vm.etch(address(5555), address(actorIdMock).code);
         actorIdMock = ActorIdMock(payable(address(5555)));
         vm.etch(address(resolveAddress), address(resolveAddressPrecompileMock).code);
-
         actorIdMock.setGetClaimsResult(
             hex"8282018081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
         );
-
         // --- Dummy transfer params ---
         transferParams = DataCapTypes.TransferParams({
             to: CommonTypes.FilAddress(transferTo),
@@ -81,7 +104,6 @@ contract ClientTest is Test {
             //    2048, 518400, 5256000, 305], [...]], []]
             operator_data: hex"828286194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013186194E20D82A5828000181E203922020F2B9A58BBC9D9856E52EAB85155C1BA298F7E8DF458BD20A3AD767E11572CA221908001A0007E9001A0050334019013180"
         });
-
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
         resolveAddress.setId(address(this), uint64(20000));
@@ -96,6 +118,11 @@ contract ClientTest is Test {
     function testIsAllocatorSet() public view {
         bytes32 allocatorRole = client.ALLOCATOR_ROLE();
         assertTrue(client.hasRole(allocatorRole, allocator));
+    }
+
+    function testIsTerminationOracleSet() public view {
+        bytes32 terminationOracleRole = client.TERMINATION_ORACLE();
+        assertTrue(client.hasRole(terminationOracleRole, terminationOracle));
     }
 
     function testIncreaseAndDecreaseAllowance() public {
@@ -299,7 +326,7 @@ contract ClientTest is Test {
         client.transfer(transferParams);
     }
 
-    function testClaimExtension() public {
+    function testClaimExtensionn() public {
         // params taken directly from `boost extend-deal` message
         // no allocations
         // 1 extension for provider 20000 and claim id 1
@@ -377,5 +404,153 @@ contract ClientTest is Test {
         assertEq(afterTransfer.length, 1);
         assertEq(afterTransfer[0].client, clientAddress);
         assertEq(afterTransfer[0].usage, 2048);
+    }
+
+    function testClaimsTerminatedEarlyRevertsWhenNotTerminationOracle() public {
+        address notTerminationOracle = vm.addr(4);
+        bytes32 expectedRole = client.TERMINATION_ORACLE();
+        vm.prank(notTerminationOracle);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, notTerminationOracle, expectedRole
+            )
+        );
+        client.claimsTerminatedEarly(earlyTerminatedClaims);
+    }
+
+    function testClaimsTerminatedEarlySetCorrectly() public {
+        bool isFirstClaimTerminated = client.terminatedClaims(1);
+        assertTrue(!isFirstClaimTerminated);
+        earlyTerminatedClaims.push(2);
+        earlyTerminatedClaims.push(3);
+        vm.prank(terminationOracle);
+        client.claimsTerminatedEarly(earlyTerminatedClaims);
+
+        isFirstClaimTerminated = client.terminatedClaims(1);
+        bool isSecondClaimTerminated = client.terminatedClaims(2);
+        bool isThirdClaimTerminated = client.terminatedClaims(3);
+        assertTrue(isFirstClaimTerminated);
+        assertTrue(isSecondClaimTerminated);
+        assertTrue(isThirdClaimTerminated);
+        bool isFourthClaimTerminated = client.terminatedClaims(4);
+        assertTrue(!isFourthClaimTerminated);
+    }
+
+    function testGetClientSpActiveDataSizeRevertGetClaimsCallFailed() public {
+        vm.etch(CALL_ACTOR_ID, address(builtInActorForTransferFunctionMock).code);
+        vm.expectRevert(Client.GetClaimsCallFailed.selector);
+        client.getClientSpActiveDataSize(clientAddress, SP2);
+    }
+
+    function testGetClientSpActiveDataSizeWithFaileCode() public {
+        actorIdMock.setGetClaimsResult(
+            hex"8282008182001081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+        );
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        uint256 size = clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
+        assertEq(size, 2048);
+    }
+
+    function testGetClientSpActiveDataDeleteAllocationInTerminatedSector() public {
+        actorIdMock.setGetClaimsResult(
+            hex"8282008182001081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+        );
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        CommonTypes.FilActorId[] memory clientAllocationIdsBefore =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsBefore.length, 2);
+        clientContractMock.addTerminatedClaims(0);
+        clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
+        CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsAfter.length, 1);
+    }
+
+    function testGetClientSpActiveDataDeleteExpiredAllocation() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        CommonTypes.FilActorId[] memory clientAllocationIdsBefore =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsBefore.length, 1);
+        vm.roll(5256407); // after allocation expiry
+        clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
+        CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsAfter.length, 0);
+    }
+
+    function testDeleteAllocationIdByValueRevertAllocationNotFound() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        vm.expectRevert(abi.encodeWithSelector(Client.AllocationNotFound.selector, 20000, clientAddress, 3));
+        clientContractMock.deleteAllocationIdByValue(SP2, clientAddress, 3);
+    }
+
+    function testDeleteAllocationIdByValue() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 3);
+        clientContractMock.deleteAllocationIdByValue(SP2, clientAddress, 2);
+        CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
+            clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        assertEq(clientAllocationIdsAfter.length, 2);
+        assertEq(CommonTypes.FilActorId.unwrap(clientAllocationIdsAfter[0]), 1);
+        assertEq(CommonTypes.FilActorId.unwrap(clientAllocationIdsAfter[1]), 3);
+    }
+
+    function testGetSPClients() public {
+        address secondClientAddress = vm.addr(5);
+        clientContractMock.setSpClients(SP2, clientAddress, 4096);
+        clientContractMock.setSpClients(SP2, secondClientAddress, 2048);
+        address[] memory spClients = clientContractMock.getSPClients(SP2);
+        assertEq(spClients.length, 2);
+        assertEq(spClients[0], clientAddress);
+        assertEq(spClients[1], secondClientAddress);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidTopLevelArray() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidTopLevelArray).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidTopLevelArray.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidFirstElementLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidFirstElementLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidFirstElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidFirstElementInnerLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidFirstElementInnerLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidFirstElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidSecondElementLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidSecondElementLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidSecondElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
+    }
+
+    function testDecodeAllocationResponseRevertInvalidSecondElementInnerLength() public {
+        vm.etch(CALL_ACTOR_ID, address(failingMockInvalidSecondElementInnerLength).code);
+        vm.prank(allocator);
+        client.increaseAllowance(clientAddress, SP2, 4096);
+        vm.expectRevert(abi.encodeWithSelector(AllocationResponseCbor.InvalidSecondElement.selector));
+        vm.prank(clientAddress);
+        client.transfer(transferParams);
     }
 }
