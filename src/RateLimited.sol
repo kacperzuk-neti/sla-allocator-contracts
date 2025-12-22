@@ -43,9 +43,16 @@ abstract contract RateLimited {
     }
 
     /**
-     * @notice Initializes the global rate limit
+     * @notice Constructor to initialize rate limiting
      */
     constructor() {
+        _initRateLimit();
+    }
+
+    /**
+     * @notice Internal method to initialize the global rate limit
+     */
+    function _initRateLimit() internal {
         _globalRateLimit = RateLimit({isGlobal: true, amount: 0, lastUpdate: block.timestamp});
     }
 

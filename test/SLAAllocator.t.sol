@@ -540,4 +540,217 @@ contract SLAAllocatorTest is Test {
         vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
     }
+
+    function testRequestDataCapWithNoPasspportEmitEvent() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectEmit(true, true, false, true);
+        emit SLAAllocator.DataCapGranted(client, SP2, 1);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportTxPayerSameAsSPOwnerRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(20000));
+
+        address client = address(this);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.TxPayerSameAsSPOwner.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportAmountExceedsNonPassportLimitRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address client = address(this);
+        uint256 overLimit = 100 * 2 ** 40 + 1;
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: overLimit
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.AmountExceedsNonPassportLimit.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), overLimit, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportPaymentTxnAlreadyUsedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.PaymentTxnAlreadyUsed.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportPaymentTxnNotVerifiedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address client = address(this);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("2"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 2
+        });
+
+        bytes memory signature =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.PaymentTxnNotVerified.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportSLAAlreadyRegisteredRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        SLAAllocator.PaymentTransaction memory txn1 = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash1 = verifySignaturesHelper.hashPaymentTransactionExt(txn1);
+        bytes32 digest1 = verifySignaturesHelper.digestToSignExt(structHash1);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digest1);
+        bytes memory signature1 = abi.encodePacked(r1, s1, v1);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn1 =
+            SLAAllocator.PaymentTransactionSigned({txn: txn1, signature: signature1});
+
+        vm.prank(address(this));
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn1);
+
+        SLAAllocator.PaymentTransaction memory txn2 = SLAAllocator.PaymentTransaction({
+            id: bytes("2"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash2 = verifySignaturesHelper.hashPaymentTransactionExt(txn2);
+        bytes32 digest2 = verifySignaturesHelper.digestToSignExt(structHash2);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digest2);
+        bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+        SLAAllocator.PaymentTransactionSigned memory signedTxn2 =
+            SLAAllocator.PaymentTransactionSigned({txn: txn2, signature: signature2});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn2);
+    }
+
+    function testRequestDataCapWithNoPassportExpectRevertExitCodeError() public {
+        ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
+        vm.etch(CALL_ACTOR_ID, address(actorIdFailingExitCodeErrorMock).code);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(address(this));
+        vm.expectRevert(MinerUtils.ExitCodeError.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
 }
