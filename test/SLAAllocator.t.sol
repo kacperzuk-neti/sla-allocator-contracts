@@ -729,4 +729,28 @@ contract SLAAllocatorTest is Test {
         vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn2);
     }
+
+    function testRequestDataCapWithNoPassportExpectRevertExitCodeError() public {
+        ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
+        vm.etch(CALL_ACTOR_ID, address(actorIdFailingExitCodeErrorMock).code);
+
+        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(address(this));
+        vm.expectRevert(MinerUtils.ExitCodeError.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
 }
