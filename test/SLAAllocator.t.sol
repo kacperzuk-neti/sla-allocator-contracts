@@ -540,4 +540,118 @@ contract SLAAllocatorTest is Test {
         vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
     }
+
+    function testRequestDataCapAttestationAlreadyUsedRevert() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+
+        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
+            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.ManualAttestationSigned memory signedAttestation =
+            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
+
+        vm.prank(client);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.AttestationAlreadyUsed.selector);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
+    }
+
+    function testRequestDataCapAttestationNotVerifiedRevert() public {
+        address client = address(this);
+
+        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
+            attestationId: bytes32(uint256(2)), client: client, provider: SP2, amount: 2, opaqueData: "data2"
+        });
+
+        bytes memory signature =
+            hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
+
+        SLAAllocator.ManualAttestationSigned memory signedAttestation =
+            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.AttestationNotVerified.selector);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
+    }
+
+    function testRequestDataCapEmitEvent() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+
+        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
+            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
+        });
+
+        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.ManualAttestationSigned memory signedAttestation =
+            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
+
+        vm.prank(client);
+        vm.expectEmit(true, true, false, true);
+        emit SLAAllocator.DataCapGranted(client, SP2, 1);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
+    }
+
+    function testRequestDataCapSLAAlreadyRegisteredRevert() public {
+        resolveAddress.setId(address(this), uint64(20000));
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        SLAAllocator.ManualAttestation memory attestation1 = SLAAllocator.ManualAttestation({
+            attestationId: bytes32(uint256(1)), client: address(this), provider: SP2, amount: 1, opaqueData: "data"
+        });
+
+        bytes32 structHash1 = verifySignaturesHelper.hashManualAttestationExt(attestation1);
+        bytes32 digest1 = verifySignaturesHelper.digestToSignExt(structHash1);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digest1);
+        bytes memory signature1 = abi.encodePacked(r1, s1, v1);
+
+        SLAAllocator.ManualAttestationSigned memory signedAttestation1 =
+            SLAAllocator.ManualAttestationSigned({attestation: attestation1, signature: signature1});
+
+        vm.prank(address(this));
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation1);
+
+        SLAAllocator.ManualAttestation memory attestation2 = SLAAllocator.ManualAttestation({
+            attestationId: bytes32(uint256(2)), client: address(this), provider: SP2, amount: 1, opaqueData: "data"
+        });
+
+        bytes32 structHash2 = verifySignaturesHelper.hashManualAttestationExt(attestation2);
+        bytes32 digest2 = verifySignaturesHelper.digestToSignExt(structHash2);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digest2);
+        bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.ManualAttestationSigned memory signedAttestation2 =
+            SLAAllocator.ManualAttestationSigned({attestation: attestation2, signature: signature2});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
+        verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation2);
+    }
 }

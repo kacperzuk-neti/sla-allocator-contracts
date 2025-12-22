@@ -380,6 +380,63 @@
   },
   {
     "type": "function",
+    "name": "requestDataCap",
+    "inputs": [
+      {
+        "name": "slaContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "attestation",
+        "type": "tuple",
+        "internalType": "struct SLAAllocator.ManualAttestationSigned",
+        "components": [
+          {
+            "name": "attestation",
+            "type": "tuple",
+            "internalType": "struct SLAAllocator.ManualAttestation",
+            "components": [
+              {
+                "name": "attestationId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "client",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "provider",
+                "type": "uint64",
+                "internalType": "CommonTypes.FilActorId"
+              },
+              {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "opaqueData",
+                "type": "string",
+                "internalType": "string"
+              }
+            ]
+          },
+          {
+            "name": "signature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "revokeRole",
     "inputs": [
       {
@@ -482,6 +539,25 @@
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "usedManualAttestations",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "isUsed",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "event",
@@ -729,6 +805,16 @@
   },
   {
     "type": "error",
+    "name": "AttestationAlreadyUsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AttestationNotVerified",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BeneficiaryFactoryAlreadySet",
     "inputs": []
   },
@@ -736,6 +822,33 @@
     "type": "error",
     "name": "BeneficiaryInstanceNonexistent",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureLength",
+    "inputs": [
+      {
+        "name": "length",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureS",
+    "inputs": [
+      {
+        "name": "s",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",
@@ -886,6 +999,11 @@
   {
     "type": "error",
     "name": "QuotaNotUnlimited",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SLAAlreadyRegistered",
     "inputs": []
   },
   {
