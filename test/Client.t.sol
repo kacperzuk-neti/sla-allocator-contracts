@@ -558,7 +558,7 @@ contract ClientTest is Test {
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
 
-        CommonTypes.FilActorId[] memory ids = clientContractMock.getClientAllocationIds(SP2, clientAddress);
+        CommonTypes.FilActorId[] memory ids = clientContractMock.getClientAllocationIdsPerProvider(SP2, clientAddress);
         assertEq(ids.length, 2);
         assertEq(CommonTypes.FilActorId.unwrap(ids[0]), 1);
         assertEq(CommonTypes.FilActorId.unwrap(ids[1]), 2);
