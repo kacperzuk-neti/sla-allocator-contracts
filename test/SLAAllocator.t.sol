@@ -44,6 +44,8 @@ contract SLAAllocatorTest is Test {
     ResolveAddressPrecompileMock public resolveAddress =
         ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
 
+    SLAAllocator.PaymentTransaction public txn;
+
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     // solhint-disable var-name-mixedcase
@@ -84,6 +86,13 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.initialize2(clientSmartContract, mockBeneficiaryFactory);
 
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
+
+        txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
     }
 
     function testIsAdminSet() public view {
@@ -383,13 +392,6 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPaymentTransactionSignature() public view {
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
         bytes32 digestOffChain = 0xeb2d73b584bf46b56d41777d6ff22c88a8c39d3638acda00f1216637c8935662;
@@ -463,13 +465,8 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.verifyPassportSignedExt(signed);
     }
 
-    function testVerifyPaymentTransactionSignatureWrongData() public view {
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 2
-        });
+    function testVerifyPaymentTransactionSignatureWrongData() public {
+        txn.amount = 2;
 
         bytes memory signature =
             hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
@@ -482,13 +479,6 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPaymentTransactionSignatureWrongSignature() public {
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
         bytes memory signature =
             hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde18507ff";
 
@@ -676,13 +666,6 @@ contract SLAAllocatorTest is Test {
 
         address client = address(this);
 
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
 
@@ -704,12 +687,7 @@ contract SLAAllocatorTest is Test {
         address client = address(this);
         uint256 overLimit = 100 * 2 ** 40 + 1;
 
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: overLimit
-        });
+        txn.amount = overLimit;
 
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
@@ -734,13 +712,6 @@ contract SLAAllocatorTest is Test {
 
         address client = address(this);
 
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
 
@@ -764,12 +735,8 @@ contract SLAAllocatorTest is Test {
 
         address client = address(this);
 
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("2"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 2
-        });
+        txn.id = bytes("1");
+        txn.amount = 2;
 
         bytes memory signature =
             hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
@@ -789,31 +756,20 @@ contract SLAAllocatorTest is Test {
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
         mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
 
-        SLAAllocator.PaymentTransaction memory txn1 = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
-        bytes32 structHash1 = verifySignaturesHelper.hashPaymentTransactionExt(txn1);
+        bytes32 structHash1 = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digest1 = verifySignaturesHelper.digestToSignExt(structHash1);
 
         (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digest1);
         bytes memory signature1 = abi.encodePacked(r1, s1, v1);
 
         SLAAllocator.PaymentTransactionSigned memory signedTxn1 =
-            SLAAllocator.PaymentTransactionSigned({txn: txn1, signature: signature1});
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature1});
 
         vm.prank(address(this));
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn1);
 
-        SLAAllocator.PaymentTransaction memory txn2 = SLAAllocator.PaymentTransaction({
-            id: bytes("2"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
+        SLAAllocator.PaymentTransaction memory txn2 = txn;
+        txn2.id = bytes("2");
 
         bytes32 structHash2 = verifySignaturesHelper.hashPaymentTransactionExt(txn2);
         bytes32 digest2 = verifySignaturesHelper.digestToSignExt(structHash2);
@@ -831,13 +787,6 @@ contract SLAAllocatorTest is Test {
     function testRequestDataCapWithNoPassportExpectRevertExitCodeError() public {
         ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
         vm.etch(CALL_ACTOR_ID, address(actorIdFailingExitCodeErrorMock).code);
-
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
 
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);

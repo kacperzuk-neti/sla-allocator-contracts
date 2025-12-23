@@ -5,17 +5,22 @@ pragma solidity ^0.8.24;
 
 import {Test} from "lib/forge-std/src/Test.sol";
 import {RateLimitedContract} from "./contracts/RateLimitedContract.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {RateLimited} from "../src/RateLimited.sol";
 
 contract RateLimitedTest is Test {
     RateLimitedContract public testContract;
+    RateLimitedContract public implementation;
 
     address public user1 = vm.addr(0x123);
     address public user2 = vm.addr(0x456);
 
     function setUp() public {
-        testContract = new RateLimitedContract();
+        implementation = new RateLimitedContract();
+        bytes memory initData = abi.encodeWithSelector(RateLimited.__RateLimited_init.selector);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        testContract = RateLimitedContract(address(proxy));
     }
 
     function testInitialCallSuccess() public {

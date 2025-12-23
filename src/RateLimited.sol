@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 /**
  * @title RateLimited
  * @notice Abstract contract for rate limiting
  */
-abstract contract RateLimited {
+abstract contract RateLimited is Initializable {
     /**
      * @notice Global rate limit
      */
@@ -43,18 +45,20 @@ abstract contract RateLimited {
     }
 
     /**
-     * @notice Constructor to initialize rate limiting
+     * @notice Disable initializers for implementation contract
      */
     constructor() {
-        _initRateLimit();
+        _disableInitializers();
     }
 
+    //solhint-disable-next-line func-name-mixedcase
     /**
      * @notice Internal method to initialize the global rate limit
      */
-    function _initRateLimit() internal {
+    function __RateLimited_init() public initializer {
         _globalRateLimit = RateLimit({isGlobal: true, amount: 0, lastUpdate: block.timestamp});
     }
+    // solhint-enable-next-line func-name-mixedcase
 
     /**
      * @notice Error emitted when the client rate limit is exceeded

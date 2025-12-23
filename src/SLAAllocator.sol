@@ -153,6 +153,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
     /**
      * @notice Maximum amount of datacap that can be granted without a passport
+     * @dev 100 * 2 ** 40 equal to 100 TiB
      */
     uint256 private constant MAX_NON_PASSPORT_LIMIT = 100 * 2 ** 40;
 
@@ -257,7 +258,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __EIP712_init("SLAAllocator", "1");
-        _initRateLimit();
+        __RateLimited_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
