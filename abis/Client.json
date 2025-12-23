@@ -186,6 +186,30 @@
   },
   {
     "type": "function",
+    "name": "getClientAllocationIdsPerProvider",
+    "inputs": [
+      {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64[]",
+        "internalType": "CommonTypes.FilActorId[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getClientSpActiveDataSize",
     "inputs": [
       {
