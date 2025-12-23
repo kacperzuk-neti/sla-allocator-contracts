@@ -581,6 +581,20 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         }
     }
 
+    /**
+     * @notice custom getter to retrieve allication ids per client and provider
+     * @param provider the FilActorId of provider
+     * @param client the client address
+     * @return allocationIds the allocation ids for the client and provider
+     */
+    function getClientAllocationIdsPerProvider(CommonTypes.FilActorId provider, address client)
+        external
+        view
+        returns (CommonTypes.FilActorId[] memory)
+    {
+        return clientAllocationIdsPerProvider[provider][client];
+    }
+
     // solhint-disable no-empty-blocks
     /**
      * @notice Internal function used to implement new logic and check if upgrade is authorized
