@@ -553,4 +553,14 @@ contract ClientTest is Test {
         vm.prank(clientAddress);
         client.transfer(transferParams);
     }
+
+    function testShouldReturnAllocationsIdWithCustomGetter() public {
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
+        clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
+
+        CommonTypes.FilActorId[] memory ids = clientContractMock.getClientAllocationIdsPerProvider(SP2, clientAddress);
+        assertEq(ids.length, 2);
+        assertEq(CommonTypes.FilActorId.unwrap(ids[0]), 1);
+        assertEq(CommonTypes.FilActorId.unwrap(ids[1]), 2);
+    }
 }
