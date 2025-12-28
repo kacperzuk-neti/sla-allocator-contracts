@@ -46,11 +46,6 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error PaymentTxnNotVerified();
 
     /**
-     * @notice Error thrown when SLA is already registered
-     */
-    error SLAAlreadyRegistered();
-
-    /**
      * @notice Error thrown when transaction payer is the same as storage provider owner
      */
     error TxPayerSameAsSPOwner();
@@ -333,10 +328,10 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         if (!isVerified) {
             revert AttestationNotVerified();
         }
-        
+
         SLARegistry registry = SLARegistry(slaContract);
         _registerSLAAndGrant(client, provider, registry, amount);
-        }
+    }
 
     /**
      * @notice Grants DataCap to a client without passport
