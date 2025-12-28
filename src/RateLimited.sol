@@ -51,14 +51,14 @@ abstract contract RateLimited is Initializable {
         _disableInitializers();
     }
 
-    //solhint-disable-next-line func-name-mixedcase
+    // solhint-disable func-name-mixedcase
     /**
      * @notice Internal method to initialize the global rate limit
      */
     function __RateLimited_init() public initializer {
         _globalRateLimit = RateLimit({isGlobal: true, amount: 0, lastUpdate: block.timestamp});
     }
-    // solhint-enable-next-line func-name-mixedcase
+    // solhint-enable func-name-mixedcase
 
     /**
      * @notice Error emitted when the client rate limit is exceeded
