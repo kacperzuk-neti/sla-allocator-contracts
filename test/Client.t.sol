@@ -454,14 +454,14 @@ contract ClientTest is Test {
 
     function testGetClientSpActiveDataDeleteAllocationInTerminatedSector() public {
         actorIdMock.setGetClaimsResult(
-            hex"8282008182001081881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
+            hex"8282028082881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000881903E81866D82A5828000181E203922020071E414627E89D421B3BAFCCB24CBA13DDE9B6F388706AC8B1D48E58935C76381908001A003815911A005034D60000"
         );
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 1);
         clientContractMock.addClientAllocationIds(SP2, clientAddress, 2);
         CommonTypes.FilActorId[] memory clientAllocationIdsBefore =
             clientContractMock.getClientAllocationIds(SP2, clientAddress);
         assertEq(clientAllocationIdsBefore.length, 2);
-        clientContractMock.addTerminatedClaims(0);
+        clientContractMock.addTerminatedClaims(1);
         clientContractMock.getClientSpActiveDataSize(clientAddress, SP2);
         CommonTypes.FilActorId[] memory clientAllocationIdsAfter =
             clientContractMock.getClientAllocationIds(SP2, clientAddress);

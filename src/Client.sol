@@ -557,10 +557,7 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             if (
                 CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_start)
                             + CommonTypes.ChainEpoch.unwrap(getClaimsResult.claims[i - failCodesIterator].term_max)
-                        < currentEpoch
-                    || terminatedClaims[
-                        CommonTypes.FilActorId.unwrap(getClaimsResult.claims[i - failCodesIterator].sector)
-                    ]
+                        < currentEpoch || terminatedClaims[CommonTypes.FilActorId.unwrap(clientAllocationIds[i])]
             ) {
                 _deleteAllocationIdByValue(provider, client, CommonTypes.FilActorId.unwrap(clientAllocationIds[i]));
                 continue;
