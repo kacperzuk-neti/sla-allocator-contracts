@@ -41,6 +41,16 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error AttestationNotVerified();
 
     /**
+     * @notice Error thrown when passport signature is not verified
+     */
+    error PassportNotVerified();
+
+    /**
+     * @notice Error thrown when passport score is too low
+     */
+    error PassportScoreTooLow();
+
+    /**
      * @notice Error thrown when payment transaction signature is not verified
      */
     error PaymentTxnNotVerified();
@@ -54,6 +64,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Error thrown when amount exceeds non-passport limit
      */
     error AmountExceedsNonPassportLimit();
+
+    /**
+     * @notice Error thrown when amount exceeds passport threshold
+     */
+    error AmountExceedsPassportThreshold();
 
     /**
      * @notice Error thrown when SLA is already registered
@@ -151,6 +166,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @dev 100 * 2 ** 40 equal to 100 TiB
      */
     uint256 private constant MAX_NON_PASSPORT_LIMIT = 100 * 2 ** 40;
+
+    /**
+     * @notice Threshold of datacap that can be granted with a passport
+     * @dev 1 * 2 ** 50 equal to 1 PiB
+     */
+    uint256 private constant PASSPORT_THRESHOLD = 1 * 2 ** 50;
 
     // solhint-disable gas-indexed-events
     /**
@@ -373,6 +394,57 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
 
         SLARegistry registry = SLARegistry(slaContract);
         _registerSLAAndGrant(client, provider, registry, amount);
+    }
+
+    /**
+     * @notice Grants DataCap to a client with passport
+     * @param provider Provider FilActorId
+     * @param slaContract SLARegistry contract address
+     * @param amount Amount of DC to grant
+     * @param clientPassport Signed passport of the client
+     * @param txn Signed payment transaction
+     */
+    function requestDataCap(
+        CommonTypes.FilActorId provider,
+        address slaContract,
+        uint256 amount,
+        PassportSigned calldata clientPassport,
+        PaymentTransactionSigned calldata txn
+    ) external clientRateLimited {
+        CommonTypes.FilAddress memory providerOwner = MinerUtils.getOwner(provider).owner;
+        uint64 resolvedProviderOwner = PrecompilesAPI.resolveAddress(providerOwner);
+        uint64 resolvedTxnFrom = PrecompilesAPI.resolveAddress(txn.txn.from);
+
+        if (resolvedProviderOwner == resolvedTxnFrom) {
+            revert TxPayerSameAsSPOwner();
+        }
+
+        if (clientPassport.passport.score <= 20) {
+            revert PassportScoreTooLow();
+        }
+
+        if (amount > PASSPORT_THRESHOLD) {
+            revert AmountExceedsPassportThreshold();
+        }
+
+        bytes memory txnId = txn.txn.id;
+        if (usedTransactions[txnId]) {
+            revert PaymentTxnAlreadyUsed();
+        }
+        usedTransactions[txnId] = true;
+
+        bool isPaymentTxnVerified = verifyPaymentTransactionSigned(txn);
+        if (!isPaymentTxnVerified) {
+            revert PaymentTxnNotVerified();
+        }
+
+        bool isPassportVerified = verifyPassportSigned(clientPassport);
+        if (!isPassportVerified) {
+            revert PassportNotVerified();
+        }
+
+        SLARegistry registry = SLARegistry(slaContract);
+        _registerSLAAndGrant(msg.sender, provider, registry, amount);
     }
 
     /**

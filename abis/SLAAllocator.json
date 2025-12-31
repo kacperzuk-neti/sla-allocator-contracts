@@ -518,6 +518,116 @@
     "name": "requestDataCap",
     "inputs": [
       {
+        "name": "provider",
+        "type": "uint64",
+        "internalType": "CommonTypes.FilActorId"
+      },
+      {
+        "name": "slaContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "clientPassport",
+        "type": "tuple",
+        "internalType": "struct SLAAllocator.PassportSigned",
+        "components": [
+          {
+            "name": "passport",
+            "type": "tuple",
+            "internalType": "struct SLAAllocator.Passport",
+            "components": [
+              {
+                "name": "expirationTimestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "subject",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "score",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
+          },
+          {
+            "name": "signature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      },
+      {
+        "name": "txn",
+        "type": "tuple",
+        "internalType": "struct SLAAllocator.PaymentTransactionSigned",
+        "components": [
+          {
+            "name": "txn",
+            "type": "tuple",
+            "internalType": "struct SLAAllocator.PaymentTransaction",
+            "components": [
+              {
+                "name": "id",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "from",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "to",
+                "type": "tuple",
+                "internalType": "struct CommonTypes.FilAddress",
+                "components": [
+                  {
+                    "name": "data",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "signature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "requestDataCap",
+    "inputs": [
+      {
         "name": "slaContract",
         "type": "address",
         "internalType": "address"
@@ -964,6 +1074,11 @@
   },
   {
     "type": "error",
+    "name": "AmountExceedsPassportThreshold",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AttestationAlreadyUsed",
     "inputs": []
   },
@@ -1170,6 +1285,16 @@
   {
     "type": "error",
     "name": "NotInitializing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PassportNotVerified",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PassportScoreTooLow",
     "inputs": []
   },
   {
