@@ -46,6 +46,7 @@ contract SLAAllocatorTest is Test {
 
     SLAAllocator.PaymentTransaction public txn;
     SLAAllocator.ManualAttestation public attestation;
+    SLAAllocator.Passport public passport;
 
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
@@ -102,6 +103,13 @@ contract SLAAllocatorTest is Test {
             amount: 1,
             opaqueData: "data"
         });
+
+        passport = SLAAllocator.Passport({
+            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
+        });
+
+        vm.prank(admin);
+        verifySignaturesHelper.setScoreThreshold(20);
     }
 
     function testIsAdminSet() public view {
@@ -380,10 +388,6 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPassportSignature() public view {
-        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
-            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
-        });
-
         bytes32 structHash = verifySignaturesHelper.hashPassportExt(passport);
         bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
         bytes32 digestOffChain = 0xe4473ea9d9322580ba9176aaf92e816e5fb409f88767d41e27362b59a923e3f4;
@@ -434,10 +438,8 @@ contract SLAAllocatorTest is Test {
         assertTrue(verified, "Signature invalid");
     }
 
-    function testVerifyPassportSignedWrongData() public view {
-        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
-            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000124, score: 100
-        });
+    function testVerifyPassportSignedWrongData() public {
+        passport.score = 50;
 
         bytes memory signature =
             hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee91b";
@@ -450,10 +452,6 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPassportSignedWrongSignature() public {
-        SLAAllocator.Passport memory passport = SLAAllocator.Passport({
-            expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
-        });
-
         bytes memory signature =
             hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee9ff";
 
@@ -695,7 +693,6 @@ contract SLAAllocatorTest is Test {
 
         address client = address(this);
 
-        txn.id = bytes("1");
         txn.amount = 2;
 
         bytes memory signature =
@@ -736,6 +733,7 @@ contract SLAAllocatorTest is Test {
 
         (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digest2);
         bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+
         SLAAllocator.PaymentTransactionSigned memory signedTxn2 =
             SLAAllocator.PaymentTransactionSigned({txn: txn2, signature: signature2});
 
@@ -750,6 +748,7 @@ contract SLAAllocatorTest is Test {
 
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -759,5 +758,267 @@ contract SLAAllocatorTest is Test {
         vm.prank(address(this));
         vm.expectRevert(MinerUtils.ExitCodeError.selector);
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithPassportTxPayerSameAsSPOwnerRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(20000));
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r1, s1, v1);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.TxPayerSameAsSPOwner.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+    }
+
+    function testRequestDataCapWithPassportAmountExceedsPassportThreshold() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        txn.amount = 1 * 2 ** 50 + 1;
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r1, s1, v1);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.AmountExceedsPassportThreshold.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1 * 2 ** 50 + 1, signedPassport, signedTxn);
+    }
+
+    function testRequestDataCapWithPassportPaymentTxnAlreadyUsedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r1, s1, v1);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(address(this));
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+
+        vm.warp(block.timestamp + 1 weeks);
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.PaymentTxnAlreadyUsed.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+    }
+
+    function testRequestDataCapWithPassportPaymentTxnNotVerifiedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+        txn.amount = 2;
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        bytes memory signatureTxn =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.PaymentTxnNotVerified.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+    }
+
+    //solhint-disable function-max-lines
+    function testRequestDataCapWithPassportSLAAlreadyRegisteredRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r1, s1, v1);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(address(this));
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+
+        vm.warp(block.timestamp + 1 weeks);
+
+        SLAAllocator.PaymentTransaction memory txn2 = txn;
+        txn2.id = bytes("2");
+
+        bytes32 structHashTxn2 = verifySignaturesHelper.hashPaymentTransactionExt(txn2);
+        bytes32 digestTxn2 = verifySignaturesHelper.digestToSignExt(structHashTxn2);
+
+        bytes32 structHashPassport2 = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport2 = verifySignaturesHelper.digestToSignExt(structHashPassport2);
+
+        (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(attestorKey, digestTxn2);
+        bytes memory signatureTxn2 = abi.encodePacked(r3, s3, v3);
+
+        (uint8 v4, bytes32 r4, bytes32 s4) = vm.sign(attestorKey, digestPassport2);
+        bytes memory signaturePassport2 = abi.encodePacked(r4, s4, v4);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn2 =
+            SLAAllocator.PaymentTransactionSigned({txn: txn2, signature: signatureTxn2});
+
+        SLAAllocator.PassportSigned memory signedPassport2 =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport2});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport2, signedTxn2);
+    }
+    //solhint-enable function-max-lines
+
+    function testRequestDataCapWithPassportExpectRevertExitCodeError() public {
+        ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
+        vm.etch(CALL_ACTOR_ID, address(actorIdFailingExitCodeErrorMock).code);
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r1, s1, v1);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(address(this));
+        vm.expectRevert(MinerUtils.ExitCodeError.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+    }
+
+    function testRequestDataCapWithPassportPassportNotVerifiedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address client = address(this);
+        passport.score = 50;
+
+        bytes memory signaturePassport =
+            hex"efd096e7750ccf6608f0d3da8c469413085f2dd5c9aa1ecb2aa70c947d3dd56e3f62c9ff06dc1d300a4ec470723f0c167d4b751a044045c5fbd7458e83bf3ee91b";
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.PassportNotVerified.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
+    }
+
+    function testRequestDataCapWithPassportPassportScoreTooLowRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        passport.score = 10;
+
+        bytes32 structHashTxn = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digestTxn = verifySignaturesHelper.digestToSignExt(structHashTxn);
+
+        bytes32 structHashPassport = verifySignaturesHelper.hashPassportExt(passport);
+        bytes32 digestPassport = verifySignaturesHelper.digestToSignExt(structHashPassport);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digestTxn);
+        bytes memory signatureTxn = abi.encodePacked(r1, s1, v1);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digestPassport);
+        bytes memory signaturePassport = abi.encodePacked(r2, s2, v2);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signatureTxn});
+
+        SLAAllocator.PassportSigned memory signedPassport =
+            SLAAllocator.PassportSigned({passport: passport, signature: signaturePassport});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.PassportScoreTooLow.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
     }
 }

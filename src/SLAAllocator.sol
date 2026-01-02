@@ -41,6 +41,16 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     error AttestationNotVerified();
 
     /**
+     * @notice Error thrown when passport signature is not verified
+     */
+    error PassportNotVerified();
+
+    /**
+     * @notice Error thrown when passport score is too low
+     */
+    error PassportScoreTooLow();
+
+    /**
      * @notice Error thrown when payment transaction signature is not verified
      */
     error PaymentTxnNotVerified();
@@ -54,6 +64,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Error thrown when amount exceeds non-passport limit
      */
     error AmountExceedsNonPassportLimit();
+
+    /**
+     * @notice Error thrown when amount exceeds passport threshold
+     */
+    error AmountExceedsPassportThreshold();
 
     /**
      * @notice Error thrown when SLA is already registered
@@ -152,6 +167,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     uint256 private constant MAX_NON_PASSPORT_LIMIT = 100 * 2 ** 40;
 
+    /**
+     * @notice Threshold of datacap that can be granted with a passport
+     * @dev 1 * 2 ** 50 equal to 1 PiB
+     */
+    uint256 private constant PASSPORT_THRESHOLD = 1 * 2 ** 50;
+
     // solhint-disable gas-indexed-events
     /**
      * @notice Emitted when datacap is granted to a client
@@ -206,6 +227,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Address of Client Smart Contract for this allocator
      */
     Client public clientSmartContract;
+
+    /**
+     * @notice Score threshold for passports
+     */
+    uint256 public scoreThreshold;
 
     /**
      * @notice Event emitted when DataCap is granted to a client
@@ -375,6 +401,60 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _registerSLAAndGrant(client, provider, registry, amount);
     }
 
+    // solhint-disable gas-strict-inequalities
+    /**
+     * @notice Grants DataCap to a client with passport (requests <= 1 PiB)
+     * @param provider Provider FilActorId
+     * @param slaContract SLARegistry contract address
+     * @param amount Amount of DC to grant
+     * @param clientPassport Signed passport of the client
+     * @param txn Signed payment transaction
+     */
+    function requestDataCap(
+        CommonTypes.FilActorId provider,
+        address slaContract,
+        uint256 amount,
+        PassportSigned calldata clientPassport,
+        PaymentTransactionSigned calldata txn
+    ) external clientRateLimited {
+        CommonTypes.FilAddress memory providerOwner = MinerUtils.getOwner(provider).owner;
+        uint64 resolvedProviderOwner = PrecompilesAPI.resolveAddress(providerOwner);
+        uint64 resolvedTxnFrom = PrecompilesAPI.resolveAddress(txn.txn.from);
+
+        if (resolvedProviderOwner == resolvedTxnFrom) {
+            revert TxPayerSameAsSPOwner();
+        }
+
+        if (clientPassport.passport.score <= scoreThreshold) {
+            revert PassportScoreTooLow();
+        }
+
+        if (amount > PASSPORT_THRESHOLD) {
+            revert AmountExceedsPassportThreshold();
+        }
+
+        bytes memory txnId = txn.txn.id;
+        if (usedTransactions[txnId]) {
+            revert PaymentTxnAlreadyUsed();
+        }
+        usedTransactions[txnId] = true;
+
+        bool isPaymentTxnVerified = verifyPaymentTransactionSigned(txn);
+        if (!isPaymentTxnVerified) {
+            revert PaymentTxnNotVerified();
+        }
+
+        bool isPassportVerified = verifyPassportSigned(clientPassport);
+        if (!isPassportVerified) {
+            revert PassportNotVerified();
+        }
+
+        SLARegistry registry = SLARegistry(slaContract);
+        _registerSLAAndGrant(msg.sender, provider, registry, amount);
+    }
+
+    // solhint-enable gas-strict-inequalities
+
     /**
      * @notice Internal function to register SLA and grant datacap
      * @param client Client address
@@ -475,6 +555,14 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     function setClientSmartContract(Client newClientSmartContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
         clientSmartContract = newClientSmartContract;
         emit ClientSmartContractSet(newClientSmartContract);
+    }
+
+    /**
+     * @notice Setter for score threshold
+     * @param newScoreThreshold The new score threshold
+     */
+    function setScoreThreshold(uint256 newScoreThreshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        scoreThreshold = newScoreThreshold;
     }
 
     /**
