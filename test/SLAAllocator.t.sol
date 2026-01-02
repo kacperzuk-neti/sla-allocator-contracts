@@ -44,6 +44,9 @@ contract SLAAllocatorTest is Test {
     ResolveAddressPrecompileMock public resolveAddress =
         ResolveAddressPrecompileMock(payable(0xFE00000000000000000000000000000000000001));
 
+    SLAAllocator.PaymentTransaction public txn;
+    SLAAllocator.ManualAttestation public attestation;
+
     address public constant CALL_ACTOR_ID = 0xfe00000000000000000000000000000000000005;
 
     // solhint-disable var-name-mixedcase
@@ -84,6 +87,21 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.initialize2(clientSmartContract, mockBeneficiaryFactory);
 
         slas.push(SLAAllocator.SLA(SLARegistry(address(slaRegistry)), SP1));
+
+        txn = SLAAllocator.PaymentTransaction({
+            id: bytes("1"),
+            from: CommonTypes.FilAddress({data: hex"f101"}),
+            to: CommonTypes.FilAddress({data: hex"f102"}),
+            amount: 1
+        });
+
+        attestation = SLAAllocator.ManualAttestation({
+            attestationId: bytes32(uint256(1)),
+            client: 0x0000000000000000000000000000000000000123,
+            provider: SP1,
+            amount: 1,
+            opaqueData: "data"
+        });
     }
 
     function testIsAdminSet() public view {
@@ -361,7 +379,7 @@ contract SLAAllocatorTest is Test {
         slaAllocator.setClientSmartContract(newClientSmartContract);
     }
 
-    function testVerifyPassportSigned() public view {
+    function testVerifyPassportSignature() public view {
         SLAAllocator.Passport memory passport = SLAAllocator.Passport({
             expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
         });
@@ -383,13 +401,6 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPaymentTransactionSignature() public view {
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
         bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
         bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
         bytes32 digestOffChain = 0xeb2d73b584bf46b56d41777d6ff22c88a8c39d3638acda00f1216637c8935662;
@@ -407,17 +418,7 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyManualAttestationSignature() public view {
-        bytes32 attestationId = bytes32(uint256(1));
-
-        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
-            attestationId: attestationId,
-            client: 0x0000000000000000000000000000000000000123,
-            provider: SP1,
-            amount: 1,
-            opaqueData: "data"
-        });
-
-        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(att);
+        bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
         bytes32 digestOnChain = verifySignaturesHelper.digestToSignExt(structHash);
         bytes32 digestOffChain = 0xd78d976d5f4f8827cce3b16f23a691baafdf9269541d9a21b84233567d585000;
 
@@ -427,7 +428,7 @@ contract SLAAllocatorTest is Test {
             hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
 
         SLAAllocator.ManualAttestationSigned memory signed =
-            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
 
         bool verified = verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
         assertTrue(verified, "Signature invalid");
@@ -463,13 +464,8 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.verifyPassportSignedExt(signed);
     }
 
-    function testVerifyPaymentTransactionSignatureWrongData() public view {
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 2
-        });
+    function testVerifyPaymentTransactionSignatureWrongData() public {
+        txn.amount = 2;
 
         bytes memory signature =
             hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
@@ -482,13 +478,6 @@ contract SLAAllocatorTest is Test {
     }
 
     function testVerifyPaymentTransactionSignatureWrongSignature() public {
-        SLAAllocator.PaymentTransaction memory txn = SLAAllocator.PaymentTransaction({
-            id: bytes("1"),
-            from: CommonTypes.FilAddress({data: hex"f101"}),
-            to: CommonTypes.FilAddress({data: hex"f102"}),
-            amount: 1
-        });
-
         bytes memory signature =
             hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde18507ff";
 
@@ -499,49 +488,30 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.verifyPaymentTransactionSignedExt(signed);
     }
 
-    function testVerifyManualAttestationSignatureWrongData() public view {
-        bytes32 attestationId = bytes32(uint256(1));
-
-        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
-            attestationId: attestationId,
-            client: 0x0000000000000000000000000000000000000123,
-            provider: SP1,
-            amount: 2,
-            opaqueData: "data"
-        });
-
+    function testVerifyManualAttestationSignatureWrongData() public {
+        attestation.amount = 2;
         bytes memory signature =
             hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
 
         SLAAllocator.ManualAttestationSigned memory signed =
-            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
 
         bool notVerified = verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
         assertFalse(notVerified, "Signature valid");
     }
 
     function testVerifyManualAttestationSignatureWrongSignature() public {
-        bytes32 attestationId = bytes32(uint256(1));
-
-        SLAAllocator.ManualAttestation memory att = SLAAllocator.ManualAttestation({
-            attestationId: attestationId,
-            client: 0x0000000000000000000000000000000000000123,
-            provider: SP1,
-            amount: 1,
-            opaqueData: "data"
-        });
-
         bytes memory signature =
             hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e0120ff";
 
         SLAAllocator.ManualAttestationSigned memory signed =
-            SLAAllocator.ManualAttestationSigned({attestation: att, signature: signature});
+            SLAAllocator.ManualAttestationSigned({attestation: attestation, signature: signature});
 
         vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         verifySignaturesHelper.verifyManualAttestationSignedExt(signed);
     }
 
-    function testRequestDataCapAttestationAlreadyUsedRevert() public {
+    function testRequestDataCapManualAttestationAttestationAlreadyUsedRevert() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
@@ -549,9 +519,7 @@ contract SLAAllocatorTest is Test {
 
         address client = address(this);
 
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
-        });
+        attestation.provider = SP2;
 
         bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
@@ -570,12 +538,10 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
     }
 
-    function testRequestDataCapAttestationNotVerifiedRevert() public {
+    function testRequestDataCapManualAttestationAttestationNotVerifiedRevert() public {
         address client = address(this);
 
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(2)), client: client, provider: SP2, amount: 2, opaqueData: "data2"
-        });
+        attestation.attestationId = bytes32(uint256(2));
 
         bytes memory signature =
             hex"f38955965e6619d56f115c4d617c5e94422b1d2e433495a03fd02fc7b7971e793455938c05fd526443886ee701c6875dca740f8f4c064d44118c3321891e01201c";
@@ -588,7 +554,7 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
     }
 
-    function testRequestDataCapEmitEvent() public {
+    function testRequestDataCapManualAttestationEmitEvent() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
@@ -596,9 +562,8 @@ contract SLAAllocatorTest is Test {
 
         address client = address(this);
 
-        SLAAllocator.ManualAttestation memory attestation = SLAAllocator.ManualAttestation({
-            attestationId: bytes32(uint256(1)), client: client, provider: SP2, amount: 1, opaqueData: "data"
-        });
+        attestation.provider = SP2;
+        attestation.client = 0x0000000000000000000000000000000000000123;
 
         bytes32 structHash = verifySignaturesHelper.hashManualAttestationExt(attestation);
         bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
@@ -611,11 +576,11 @@ contract SLAAllocatorTest is Test {
 
         vm.prank(client);
         vm.expectEmit(true, true, false, true);
-        emit SLAAllocator.DataCapGranted(client, SP2, 1);
+        emit SLAAllocator.DataCapGranted(0x0000000000000000000000000000000000000123, SP2, 1);
         verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation);
     }
 
-    function testRequestDataCapSLAAlreadyRegisteredRevert() public {
+    function testRequestDataCapManualAttestationSLAAlreadyRegisteredRevert() public {
         resolveAddress.setId(address(this), uint64(20000));
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
@@ -653,5 +618,146 @@ contract SLAAllocatorTest is Test {
         vm.prank(address(this));
         vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
         verifySignaturesHelper.requestDataCap(address(slaRegistry), signedAttestation2);
+    }
+
+    function testRequestDataCapWithNoPassportTxPayerSameAsSPOwnerRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(20000));
+
+        address client = address(this);
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.TxPayerSameAsSPOwner.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportAmountExceedsNonPassportLimitRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address client = address(this);
+        uint256 overLimit = 100 * 2 ** 40 + 1;
+
+        txn.amount = overLimit;
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.AmountExceedsNonPassportLimit.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), overLimit, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportPaymentTxnAlreadyUsedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        address client = address(this);
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.PaymentTxnAlreadyUsed.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportPaymentTxnNotVerifiedRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address client = address(this);
+
+        txn.id = bytes("1");
+        txn.amount = 2;
+
+        bytes memory signature =
+            hex"c8b3e98ca2aff787d06bcc4db12fbd586fdfef4093caf3ba730d734d4dadd2e2425f9daedcf6ecb2b52139bf354133b357b1a7e2d222285be29a2c7fbde185071b";
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(client);
+        vm.expectRevert(SLAAllocator.PaymentTxnNotVerified.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
+    }
+
+    function testRequestDataCapWithNoPassportSLAAlreadyRegisteredRevert() public {
+        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
+        resolveAddress.setAddress(hex"f101", uint64(123));
+
+        address beneficiaryEthAddressContract = FilAddressIdConverter.toAddress(20000);
+        mockBeneficiaryFactory.setInstance(SP2, beneficiaryEthAddressContract);
+
+        bytes32 structHash1 = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest1 = verifySignaturesHelper.digestToSignExt(structHash1);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(attestorKey, digest1);
+        bytes memory signature1 = abi.encodePacked(r1, s1, v1);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn1 =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature1});
+
+        vm.prank(address(this));
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn1);
+
+        SLAAllocator.PaymentTransaction memory txn2 = txn;
+        txn2.id = bytes("2");
+
+        bytes32 structHash2 = verifySignaturesHelper.hashPaymentTransactionExt(txn2);
+        bytes32 digest2 = verifySignaturesHelper.digestToSignExt(structHash2);
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(attestorKey, digest2);
+        bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+        SLAAllocator.PaymentTransactionSigned memory signedTxn2 =
+            SLAAllocator.PaymentTransactionSigned({txn: txn2, signature: signature2});
+
+        vm.prank(address(this));
+        vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn2);
+    }
+
+    function testRequestDataCapWithNoPassportExpectRevertExitCodeError() public {
+        ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
+        vm.etch(CALL_ACTOR_ID, address(actorIdFailingExitCodeErrorMock).code);
+
+        bytes32 structHash = verifySignaturesHelper.hashPaymentTransactionExt(txn);
+        bytes32 digest = verifySignaturesHelper.digestToSignExt(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        SLAAllocator.PaymentTransactionSigned memory signedTxn =
+            SLAAllocator.PaymentTransactionSigned({txn: txn, signature: signature});
+
+        vm.prank(address(this));
+        vm.expectRevert(MinerUtils.ExitCodeError.selector);
+        verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedTxn);
     }
 }

@@ -11,27 +11,49 @@ import {CommonTypes} from "filecoin-solidity/v0.8/types/CommonTypes.sol";
 import {FilAddresses} from "filecoin-solidity/v0.8/utils/FilAddresses.sol";
 import {VerifRegAPI} from "filecoin-solidity/v0.8/VerifRegAPI.sol";
 import {VerifRegTypes} from "filecoin-solidity/v0.8/types/VerifRegTypes.sol";
+import {PrecompilesAPI} from "filecoin-solidity/v0.8/PrecompilesAPI.sol";
 
 import {MinerUtils} from "./libs/MinerUtils.sol";
 import {BeneficiaryFactory} from "./BeneficiaryFactory.sol";
 import {Client} from "./Client.sol";
 import {SLARegistry} from "./SLARegistry.sol";
+import {RateLimited} from "./RateLimited.sol";
 
 /**
  * @title SLA Allocator
  * @notice Upgradeable contract for SLA allocation with role-based access control
  * @dev This contract is designed to be deployed as a proxy contract
  */
-contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable {
+contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable, RateLimited {
     /**
      * @notice Error thrown when attestation has already been used
      */
     error AttestationAlreadyUsed();
 
     /**
+     * @notice Error thrown when PaymentTransaction is already used
+     */
+    error PaymentTxnAlreadyUsed();
+
+    /**
      * @notice Error thrown when attestation signature is not verified
      */
     error AttestationNotVerified();
+
+    /**
+     * @notice Error thrown when payment transaction signature is not verified
+     */
+    error PaymentTxnNotVerified();
+
+    /**
+     * @notice Error thrown when transaction payer is the same as storage provider owner
+     */
+    error TxPayerSameAsSPOwner();
+
+    /**
+     * @notice Error thrown when amount exceeds non-passport limit
+     */
+    error AmountExceedsNonPassportLimit();
 
     /**
      * @notice Error thrown when SLA is already registered
@@ -124,6 +146,12 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     );
     // solhint-enable gas-small-strings
 
+    /**
+     * @notice Maximum amount of datacap that can be granted without a passport
+     * @dev 100 * 2 ** 40 equal to 100 TiB
+     */
+    uint256 private constant MAX_NON_PASSPORT_LIMIT = 100 * 2 ** 40;
+
     // solhint-disable gas-indexed-events
     /**
      * @notice Emitted when datacap is granted to a client
@@ -163,6 +191,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @notice Tracking for used manual attestations
      */
     mapping(bytes32 id => bool isUsed) public usedManualAttestations;
+
+    /**
+     * @notice Tracking for used payment transactions by id
+     */
+    mapping(bytes id => bool isUsed) public usedTransactions;
 
     /**
      * @notice List of provider FilActorIds
@@ -220,6 +253,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __EIP712_init("SLAAllocator", "1");
+        __RateLimited_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
@@ -293,6 +327,48 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         bool isVerified = verifyManualAttestationSigned(attestation);
         if (!isVerified) {
             revert AttestationNotVerified();
+        }
+
+        SLARegistry registry = SLARegistry(slaContract);
+        _registerSLAAndGrant(client, provider, registry, amount);
+    }
+
+    /**
+     * @notice Grants DataCap to a client without passport
+     * @param provider Provider FilActorId
+     * @param slaContract SLARegistry contract address
+     * @param amount Amount of DC to grant
+     * @param txn Signed payment transaction
+     */
+    function requestDataCap(
+        CommonTypes.FilActorId provider,
+        address slaContract,
+        uint256 amount,
+        PaymentTransactionSigned calldata txn
+    ) external globallyRateLimited {
+        address client = msg.sender;
+
+        CommonTypes.FilAddress memory providerOwner = MinerUtils.getOwner(provider).owner;
+        uint64 resolvedProviderOwner = PrecompilesAPI.resolveAddress(providerOwner);
+        uint64 resolvedTxnFrom = PrecompilesAPI.resolveAddress(txn.txn.from);
+
+        if (resolvedProviderOwner == resolvedTxnFrom) {
+            revert TxPayerSameAsSPOwner();
+        }
+
+        if (amount > MAX_NON_PASSPORT_LIMIT) {
+            revert AmountExceedsNonPassportLimit();
+        }
+
+        bytes memory txnId = txn.txn.id;
+        if (usedTransactions[txnId]) {
+            revert PaymentTxnAlreadyUsed();
+        }
+        usedTransactions[txnId] = true;
+
+        bool isVerified = verifyPaymentTransactionSigned(txn);
+        if (!isVerified) {
+            revert PaymentTxnNotVerified();
         }
 
         SLARegistry registry = SLARegistry(slaContract);
