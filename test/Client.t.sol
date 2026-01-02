@@ -339,7 +339,7 @@ contract ClientTest is Test {
         client.transfer(transferParams);
     }
 
-    function testClaimExtensionn() public {
+    function testClaimExtension() public {
         // params taken directly from `boost extend-deal` message
         // no allocations
         // 1 extension for provider 20000 and claim id 1
@@ -378,6 +378,7 @@ contract ClientTest is Test {
         client.transfer(transferParams);
         assertEq(client.allowances(clientAddress, SP2), 0);
     }
+
 
     function testClaimExtensionDecreaseAllowance() public {
         vm.prank(allocator);
@@ -579,19 +580,6 @@ contract ClientTest is Test {
         assertEq(ids.length, 2);
         assertEq(CommonTypes.FilActorId.unwrap(ids[0]), 1);
         assertEq(CommonTypes.FilActorId.unwrap(ids[1]), 2);
-    }
-
-    /**
-     * allocations: []
-     * claimExtensions: []
-     */
-    function testTransferRevertNoAllocationOrClaim() public {
-        resolveAddress.setId(address(this), uint64(20000));
-        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
-        transferParams.operator_data = hex"828080";
-        vm.prank(clientAddress);
-        vm.expectRevert(abi.encodeWithSelector(Client.NoAllocationFound.selector));
-        client.transfer(transferParams);
     }
 
     /**

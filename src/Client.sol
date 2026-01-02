@@ -170,11 +170,6 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         CommonTypes.FilActorId provider, int64 beneficiaryExpiration, int64 requiredExpiration
     );
 
-    /**
-     * @notice Thrown if no allocation is found
-     */
-    error NoAllocationFound();
-
     struct ProviderAllocation {
         CommonTypes.FilActorId provider;
         uint64 size;
@@ -401,8 +396,6 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
 
             return;
         }
-
-        revert NoAllocationFound();
     }
 
     // solhint-disable function-max-lines
@@ -426,10 +419,9 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         uint64 provider;
         uint256 byteIdx = 0;
 
-        {
-            (resultLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
-            if (resultLength != 2) revert InvalidOperatorData();
-        }
+        (resultLength, byteIdx) = CBORDecoder.readFixedArray(cborData, byteIdx);
+        if (resultLength != 2) revert InvalidOperatorData();
+
         {
             uint64 size;
             int64 termMax;
@@ -444,21 +436,26 @@ contract Client is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                     revert InvalidAllocationRequest();
                 }
 
-                (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                {
+                    (provider, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                    allocations[i].provider = CommonTypes.FilActorId.wrap(provider);
+                }
                 // slither-disable-start unused-return
                 (, byteIdx) = CBORDecoder.readBytes(cborData, byteIdx); // data (CID)
-                (size, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                {
+                    (size, byteIdx) = CBORDecoder.readUInt64(cborData, byteIdx);
+                    allocations[i].size = size;
+                }
                 (, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx); // termMin
                 // slither-disable-end unused-return
-                (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
-                (expiration, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+                {
+                    (termMax, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+                    (expiration, byteIdx) = CBORDecoder.readInt64(cborData, byteIdx);
+                    allocations[i].allocationTime = termMax + expiration;
 
-                allocations[i].provider = CommonTypes.FilActorId.wrap(provider);
-                allocations[i].size = size;
-                allocations[i].allocationTime = termMax + expiration;
-
-                if (allocations[i].allocationTime > longestAllocation.allocationTime) {
-                    longestAllocation = allocations[i];
+                    if (allocations[i].allocationTime > longestAllocation.allocationTime) {
+                        longestAllocation = allocations[i];
+                    }
                 }
             }
         }
