@@ -107,6 +107,9 @@ contract SLAAllocatorTest is Test {
         passport = SLAAllocator.Passport({
             expirationTimestamp: 1, subject: 0x0000000000000000000000000000000000000123, score: 100
         });
+
+        vm.prank(admin);
+        verifySignaturesHelper.setScoreThreshold(20);
     }
 
     function testIsAdminSet() public view {

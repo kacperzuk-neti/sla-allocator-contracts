@@ -229,6 +229,11 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     Client public clientSmartContract;
 
     /**
+     * @notice Score threshold for passports
+     */
+    uint256 public scoreThreshold;
+
+    /**
      * @notice Event emitted when DataCap is granted to a client
      * @param client The client address
      * @param provider The provider FilActorId
@@ -420,7 +425,7 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
             revert TxPayerSameAsSPOwner();
         }
 
-        if (clientPassport.passport.score <= 20) {
+        if (clientPassport.passport.score <= scoreThreshold) {
             revert PassportScoreTooLow();
         }
 
@@ -550,6 +555,14 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     function setClientSmartContract(Client newClientSmartContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
         clientSmartContract = newClientSmartContract;
         emit ClientSmartContractSet(newClientSmartContract);
+    }
+
+    /**
+     * @notice Setter for score threshold
+     * @param newScoreThreshold The new score threshold
+     */
+    function setScoreThreshold(uint256 newScoreThreshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        scoreThreshold = newScoreThreshold;
     }
 
     /**
