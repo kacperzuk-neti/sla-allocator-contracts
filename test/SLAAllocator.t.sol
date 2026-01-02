@@ -878,6 +878,7 @@ contract SLAAllocatorTest is Test {
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport, signedTxn);
     }
 
+    //solhint-disable function-max-lines
     function testRequestDataCapWithPassportSLAAlreadyRegisteredRevert() public {
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         resolveAddress.setAddress(hex"f101", uint64(123));
@@ -933,6 +934,7 @@ contract SLAAllocatorTest is Test {
         vm.expectRevert(SLAAllocator.SLAAlreadyRegistered.selector);
         verifySignaturesHelper.requestDataCap(SP2, address(slaRegistry), 1, signedPassport2, signedTxn2);
     }
+    //solhint-enable function-max-lines
 
     function testRequestDataCapWithPassportExpectRevertExitCodeError() public {
         ActorIdExitCodeErrorFailingMock actorIdFailingExitCodeErrorMock = new ActorIdExitCodeErrorFailingMock();
