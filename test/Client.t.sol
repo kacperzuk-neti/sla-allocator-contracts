@@ -590,7 +590,7 @@ contract ClientTest is Test {
         resolveAddress.setAddress(hex"00C2A101", uint64(20000));
         transferParams.operator_data = hex"828080";
         vm.prank(clientAddress);
-        vm.expectRevert(abi.encodeWithSelector(Client.NoAllocationOrClaim.selector));
+        vm.expectRevert(abi.encodeWithSelector(Client.NoAllocationFound.selector));
         client.transfer(transferParams);
     }
 
@@ -615,26 +615,6 @@ contract ClientTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 Client.InsufficientBeneficiaryAllocationExpiration.selector, SP2, 6000000, 6500000000000
-            )
-        );
-        client.transfer(transferParams);
-    }
-
-    /**
-     * allocations: []
-     * claimExtensions: [{
-     *   provider: 20000,
-     *   termMax: 1250000000000
-     * }]
-     */
-    function testTransferRevertInsufficientExpirationForClaimExtension() public {
-        resolveAddress.setId(address(this), uint64(20000));
-        resolveAddress.setAddress(hex"00C2A101", uint64(20000));
-        transferParams.operator_data = hex"82808183194E201927101B0000012309CE5400";
-        vm.prank(clientAddress);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Client.InsufficientBeneficiaryClaimExtensionExpiration.selector, SP2, 6000000, 1250000000000
             )
         );
         client.transfer(transferParams);
