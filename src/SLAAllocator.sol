@@ -396,8 +396,9 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _registerSLAAndGrant(client, provider, registry, amount);
     }
 
+    // solhint-disable gas-strict-inequalities
     /**
-     * @notice Grants DataCap to a client with passport
+     * @notice Grants DataCap to a client with passport (requests <= 1 PiB)
      * @param provider Provider FilActorId
      * @param slaContract SLARegistry contract address
      * @param amount Amount of DC to grant
@@ -446,6 +447,8 @@ contract SLAAllocator is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         SLARegistry registry = SLARegistry(slaContract);
         _registerSLAAndGrant(msg.sender, provider, registry, amount);
     }
+
+    // solhint-enable gas-strict-inequalities
 
     /**
      * @notice Internal function to register SLA and grant datacap
